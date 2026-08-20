@@ -21,7 +21,9 @@ struct SearchField: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .focused($focused)
-                    .onChange(of: text) { _, value in schedule(value) }
+                    // Forme à un paramètre : celle à deux exige iOS 17, or
+                    // nous ciblons iOS 16 pour couvrir l'iPhone 8.
+                    .onChange(of: text) { value in schedule(value) }
                 if !text.isEmpty {
                     Button {
                         text = ""; suggestions = []
