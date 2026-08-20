@@ -1,0 +1,43 @@
+# Définition du projet Xcode, régénérée par `xcodegen` (voir mobile/ios/README.md).
+#
+# Pourquoi pas un .xcodeproj versionné : Xcode réécrit ce fichier en permanence,
+# ses diffs sont illisibles et ses conflits ingérables. Ici la vérité tient en
+# quelques lignes lisibles, et le projet se reconstruit à l'identique.
+name: EcoBuilding
+options:
+  bundleIdPrefix: io.confinia
+  deploymentTarget:
+    iOS: "16.0"          # couvre l'iPhone 8 et au-delà : nos utilisateurs
+                         # visitent des logements, pas des salons de la tech
+  createIntermediateGroups: true
+
+packages:
+  # Carte 3D : la MÊME source de tuiles et la même expression de couleur DPE que
+  # le web et le rendu PDF — une seule vérité visuelle pour les trois surfaces.
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    from: "6.0.0"
+
+targets:
+  EcoBuilding:
+    type: application
+    platform: iOS
+    sources:
+      - path: EcoBuilding/Sources
+    dependencies:
+      - package: MapLibre
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.confinia.ecobuilding
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"      # iPhone seulement en V1
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleLightContent
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # La géolocalisation est LE service que le web ne rend pas : « quels
+        # bâtiments autour de moi ». Le texte est vu par l'utilisateur ET par la
+        # revue Apple — il doit dire l'usage réel, pas une formule creuse.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: >-
+          Pour afficher les bâtiments autour de vous et vous situer sur la carte.
