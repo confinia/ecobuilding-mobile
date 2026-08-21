@@ -18,6 +18,7 @@ struct BuildingMap: UIViewRepresentable {
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     private static let sourceID = "bdnb"
     private static let layerID = "bdnb-dpe-3d"
+    fileprivate static let selectedLayerID = "bdnb-selected"
 
     func makeUIView(context: Context) -> MLNMapView {
         let map = MLNMapView(frame: .zero)
@@ -49,6 +50,7 @@ struct BuildingMap: UIViewRepresentable {
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
         weak var map: MLNMapView?
+        var selectedLayer: MLNFillExtrusionStyleLayer?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
 
         init(onSelect: @escaping (String, CLLocationCoordinate2D) -> Void) {
@@ -98,6 +100,26 @@ struct BuildingMap: UIViewRepresentable {
             // silence — la leçon a coûté cher côté web.
             layer.fillExtrusionOpacity = NSExpression(forConstantValue: 0.9)
             style.addLayer(layer)
+
+            // Confirmation visuelle de la sélection. Sans elle, on touche un
+            // bâtiment et on doit DEVINER, d'après l'adresse affichée, si c'est
+            // bien celui qu'on visait — la même leçon que sur le web (#237).
+            // Un calque filtré plutôt qu'un marqueur : le marqueur masque le
+            // bâtiment qu'il est censé désigner.
+            let highlight = MLNFillExtrusionStyleLayer(
+                identifier: BuildingMap.selectedLayerID, source: source)
+            highlight.sourceLayerIdentifier = "sql_statement"
+            highlight.minimumZoomLevel = 14
+            highlight.predicate = NSPredicate(value: false)   // rien au départ
+            highlight.fillExtrusionColor = NSExpression(
+                forConstantValue: UIColor(red: 0.17, green: 0.48, blue: 0.29, alpha: 1))
+            highlight.fillExtrusionHeight = NSExpression(
+                format: "mgl_coalesce({%@, %@})",
+                NSExpression(forKeyPath: "hauteur_mean"),
+                NSExpression(forConstantValue: 6))
+            highlight.fillExtrusionOpacity = NSExpression(forConstantValue: 1.0)
+            style.addLayer(highlight)
+            selectedLayer = highlight
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
@@ -108,6 +130,7 @@ struct BuildingMap: UIViewRepresentable {
             guard let feature = features.first,
                   let id = feature.attribute(forKey: "batiment_groupe_id") as? String
             else { return }
+            selectedLayer?.predicate = NSPredicate(format: "batiment_groupe_id == %@", id)
             onSelect(id, map.convert(point, toCoordinateFrom: map))
         }
     }
