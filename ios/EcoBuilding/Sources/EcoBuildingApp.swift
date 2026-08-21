@@ -17,6 +17,16 @@ struct ContentView: View {
     @State private var selection: Selection?
     @State private var search = ""
 
+    /// « v1.0 (12) » : version publique et numéro de compilation, les deux
+    /// étant nécessaires — la version publique bouge rarement, le numéro de
+    /// compilation identifie précisément ce qui tourne sur l'appareil.
+    static var versionLabel: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "v\(version) (\(build))"
+    }
+
     struct Selection: Identifiable {
         let id: String
         let lon: Double
@@ -35,6 +45,23 @@ struct ContentView: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 8)          // ne pas coller à la barre d'état
+
+            // Version affichée en clair : un testeur qui dit « ça plante » sans
+            // savoir sur quelle version tourne son téléphone fait perdre un
+            // aller-retour à chaque fois.
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text(Self.versionLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(.thinMaterial, in: Capsule())
+                        .padding(.trailing, 12).padding(.bottom, 6)
+                }
+            }
+            .allowsHitTesting(false)   // ne jamais voler un toucher à la carte
         }
         .sheet(item: $selection) { sel in
             BuildingSheet(buildingID: sel.id, lon: sel.lon, lat: sel.lat)
