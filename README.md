@@ -3,9 +3,15 @@
 Applications iOS (et à venir Android) d'EcoBuilding : carte 3D des bâtiments
 français colorés par classe énergétique, fiche détaillée, fiche PDF partageable.
 
-**Dépôt privé, et il doit le rester.** Le produit web est destiné à l'open
-source ; le mobile est la partie commerciale. Les deux communiquent par l'API
-publique `/v1`, dont le contrat est vérifié à chaque déploiement côté serveur.
+**Sous licence AGPL-3.0.** Ce dépôt est séparé de
+[confinia/ecobuilding](https://github.com/confinia/ecobuilding) (le produit web
+et l'API) parce qu'une application mobile a son propre cycle : compilations
+signées, magasins, versions installées qui survivent des mois à leur serveur.
+Les deux communiquent par l'API publique `/v1`, dont le contrat est vérifié à
+chaque déploiement côté serveur.
+
+La stratégie commerciale et la tarification vivent à part, dans un dépôt privé :
+ce qui est ouvert, c'est le logiciel, pas le plan d'affaires.
 
 ## Démarrer
 
@@ -40,4 +46,11 @@ pas de société. Voir `IPHONE.md` dans le dépôt principal pour le suivi du
 passage au payant.
 
 Clés de signature et clés App Store Connect : **jamais dans ce dépôt** —
-`~/.appstoreconnect/private_keys/`.
+`~/.appstoreconnect/private_keys/`. Les identifiants Apple non secrets
+(équipe, identifiant de lot, clés d'API) sont dans `APPLE.local.md`, exclu du
+dépôt.
+
+## Licence
+
+[GNU AGPL-3.0](LICENSE). Toute personne qui exécute une version modifiée de ce
+logiciel accessible par le réseau doit en publier les sources.
