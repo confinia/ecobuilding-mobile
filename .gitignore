@@ -1,0 +1,11 @@
+# Projet Xcode : GÉNÉRÉ par xcodegen depuis ios/project.yml.
+ios/EcoBuilding.xcodeproj/
+.DS_Store
+build/
+DerivedData/
+
+# Identifiants et clés Apple : JAMAIS dans le dépôt.
+# Les clés privées vivent dans ~/.appstoreconnect/private_keys/.
+*.p8
+AuthKey_*
+APPLE.local.md
