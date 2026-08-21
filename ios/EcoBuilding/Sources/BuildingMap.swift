@@ -1,3 +1,4 @@
+import CoreLocation
 import MapLibre
 import SwiftUI
 
@@ -27,15 +28,30 @@ struct BuildingMap: UIViewRepresentable {
         // cadrage vient de userTrackingMode ci-dessous : l'usage mobile, c'est
         // « les bâtiments AUTOUR DE MOI » — atterrir sur une ville arbitraire
         // oblige l'utilisateur à chercher avant de comprendre à quoi sert l'app.
-        map.setCenter(.init(latitude: 43.6108, longitude: 3.8767), zoomLevel: 16, animated: false)
         map.minimumZoomLevel = 5
         map.showsUserLocation = true
+
+        // Partir de la position de l'utilisateur, PAS d'une ville en dur.
+        // Auparavant la carte s'ouvrait sur Montpellier puis traversait la
+        // France en vol : spectaculaire une fois, pénible toutes les suivantes,
+        // et trompeur — on croit un instant regarder son quartier.
+        // Zoom 18 : à 16 les bâtiments sont trop petits pour être touchés.
+        if let fix = context.coordinator.locations.location {
+            // Position déjà connue du système : on y est d'emblée, sans animation.
+            map.setCenter(fix.coordinate, zoomLevel: 18, animated: false)
+        } else {
+            // Pas encore de position : vue d'ensemble de la France, et le premier
+            // point reçu déclenchera un ZOOM (voir didUpdate userLocation) —
+            // jamais un déplacement latéral d'une ville à une autre.
+            map.setCenter(.init(latitude: 46.6, longitude: 2.5), zoomLevel: 4.5, animated: false)
+        }
         map.userTrackingMode = .follow
         // Inclinaison : le relief EST le produit. À plat, on ne distingue pas
-        // une passoire de quatre étages d'une maison de plain-pied.
-        map.setCamera(MLNMapCamera(lookingAtCenter: map.centerCoordinate,
-                                   altitude: 600, pitch: 45, heading: 0),
-                      animated: false)
+        // une passoire de quatre étages d'une maison de plain-pied. On modifie
+        // la caméra COURANTE pour ne pas écraser le zoom fixé ci-dessus.
+        let camera = map.camera
+        camera.pitch = 45
+        map.setCamera(camera, animated: false)
         map.delegate = context.coordinator
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
@@ -52,12 +68,31 @@ struct BuildingMap: UIViewRepresentable {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
+        /// Sert uniquement à lire la position DÉJÀ connue du système au
+        /// démarrage, pour ouvrir la carte au bon endroit sans animation.
+        let locations = CLLocationManager()
+        private var didCenter = false
 
         init(onSelect: @escaping (String, CLLocationCoordinate2D) -> Void) {
             self.onSelect = onSelect
+            super.init()
+            locations.requestWhenInUseAuthorization()
+        }
+
+        /// Premier point reçu quand aucune position n'était connue : on zoome
+        /// depuis la vue d'ensemble, sans traversée latérale.
+        func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
+            guard !didCenter, let coord = userLocation?.coordinate,
+                  CLLocationCoordinate2DIsValid(coord) else { return }
+            didCenter = true
+            mapView.setCenter(coord, zoomLevel: 18, animated: true)
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+            // Le style peut être rechargé (changement de fond, reprise après
+            // veille) : réajouter une source ou un calque déjà présent lève une
+            // exception, donc plante l'app.
+            guard style.source(withIdentifier: BuildingMap.sourceID) == nil else { return }
             // Le fond de carte porte ses propres bâtiments OSM, qui ne
             // s'alignent pas sur les emprises BDNB : deux volumes superposés et
             // décalés. On ne garde que les nôtres, porteurs du DPE.
@@ -110,7 +145,12 @@ struct BuildingMap: UIViewRepresentable {
                 identifier: BuildingMap.selectedLayerID, source: source)
             highlight.sourceLayerIdentifier = "sql_statement"
             highlight.minimumZoomLevel = 14
-            highlight.predicate = NSPredicate(value: false)   // rien au départ
+            // Rien de sélectionné au départ. PAS « NSPredicate(value: false) » :
+            // MapLibre traduit les prédicats en filtres de style et ne sait pas
+            // convertir une constante booléenne — il produit alors une valeur
+            // nulle et l'app meurt sur une exception au chargement du style.
+            // Une comparaison à un identifiant impossible fait le même travail.
+            highlight.predicate = NSPredicate(format: "batiment_groupe_id == %@", "")
             highlight.fillExtrusionColor = NSExpression(
                 forConstantValue: UIColor(red: 0.17, green: 0.48, blue: 0.29, alpha: 1))
             highlight.fillExtrusionHeight = NSExpression(

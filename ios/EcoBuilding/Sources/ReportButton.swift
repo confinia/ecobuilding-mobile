@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 import UIKit
 
@@ -60,7 +61,7 @@ struct ReportButton: View {
             }
         }
         .task { offer = try? await API.offer() }
-        .sheet(item: $pdf) { url in ShareSheet(url: url) }
+        .sheet(item: $pdf) { url in PDFPreview(url: url) }
     }
 
     private var stageLabel: String {
@@ -102,15 +103,33 @@ struct ReportButton: View {
     }
 }
 
-/// Partage système : enregistrer dans Fichiers, envoyer par message, imprimer.
-/// C'est ce qui fait de la fiche un objet transmissible — un agent l'envoie à
-/// son client, un particulier à son artisan.
-private struct ShareSheet: UIViewControllerRepresentable {
+/// Lecteur natif d'iOS : la fiche s'AFFICHE tout de suite.
+///
+/// La feuille de partage seule obligeait à enregistrer dans Fichiers puis à
+/// rouvrir depuis le gestionnaire de fichiers, qui la confiait à un navigateur —
+/// trois étapes et une sortie de l'app pour voir ce qu'on vient de payer. Ici la
+/// fiche s'ouvre directement, et le bouton de partage du lecteur permet ensuite
+/// de l'envoyer à un client ou de l'enregistrer.
+private struct PDFPreview: UIViewControllerRepresentable {
     let url: URL
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let preview = QLPreviewController()
+        preview.dataSource = context.coordinator
+        return UINavigationController(rootViewController: preview)
     }
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ vc: UINavigationController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(url: url) }
+
+    final class Coordinator: NSObject, QLPreviewControllerDataSource {
+        let url: URL
+        init(url: URL) { self.url = url }
+        func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
+        func previewController(_ controller: QLPreviewController,
+                               previewItemAt index: Int) -> QLPreviewItem {
+            url as QLPreviewItem
+        }
+    }
 }
 
 extension URL: @retroactive Identifiable {
