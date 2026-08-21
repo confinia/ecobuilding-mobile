@@ -24,6 +24,7 @@ targets:
     platform: iOS
     sources:
       - path: EcoBuilding/Sources
+      - path: EcoBuilding/Assets.xcassets
     dependencies:
       - package: MapLibre
     settings:
@@ -32,6 +33,7 @@ targets:
         # de plus serait une seconde source de vérité, qui finit toujours par
         # diverger du project.yml.
         GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: io.confinia.ecobuilding
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
