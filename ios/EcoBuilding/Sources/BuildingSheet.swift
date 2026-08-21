@@ -8,7 +8,13 @@ import SwiftUI
 /// Ce qui manque encore est annoncé, jamais masqué.
 @MainActor
 final class BuildingModel: ObservableObject {
+    /// Adresse renvoyée par le serveur : celle du « bâtiment groupe » BDNB.
     @Published var address: String?
+    /// Ce que l'utilisateur a réellement cherché. Un bâtiment groupe peut
+    /// couvrir plusieurs adresses : titrer avec l'adresse principale du groupe
+    /// affichait « 5 Allée des Marronniers » à qui avait cherché « 2 Allée des
+    /// Peupliers » — on croit s'être trompé de bâtiment.
+    @Published var searched: String?
     @Published var building: JSONValue?
     @Published var blocks: [String: JSONValue] = [:]
     @Published var marketDIA: JSONValue?
@@ -36,9 +42,11 @@ final class BuildingModel: ObservableObject {
             stream = API.buildingStream(id: id, lon: lon, lat: lat)
         case let .suggestion(banID, lon, lat, label):
             self.lon = lon; self.lat = lat
+            searched = label
             address = label            // afficher tout de suite ce qu'on a choisi
             stream = API.lookupStream(banID: banID, lon: lon, lat: lat)
         case let .freeText(q):
+            searched = q
             address = q
             stream = API.lookupStream(q: q)
         }
@@ -77,7 +85,14 @@ struct BuildingSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(model.address ?? "Bâtiment").font(.title3.bold())
+                Text(model.searched ?? model.address ?? "Bâtiment").font(.title3.bold())
+                // Le groupe BDNB porte parfois une autre adresse principale :
+                // la dire, plutôt que de laisser croire à une erreur.
+                if let principal = model.address, let searched = model.searched,
+                   principal.caseInsensitiveCompare(searched) != .orderedSame {
+                    Text("Adresse principale du bâtiment : \(principal)")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
 
                 if let failure = model.failure {
                     Text(failure).foregroundStyle(.secondary)
