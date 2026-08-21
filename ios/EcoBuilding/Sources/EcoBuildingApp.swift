@@ -34,6 +34,7 @@ struct ContentView: View {
                 selection = Selection(id: "", lon: suggestion.lon, lat: suggestion.lat)
             }
             .padding(.horizontal, 12)
+            .padding(.top, 8)          // ne pas coller à la barre d'état
         }
         .sheet(item: $selection) { sel in
             BuildingSheet(buildingID: sel.id, lon: sel.lon, lat: sel.lat)

@@ -22,9 +22,19 @@ struct BuildingMap: UIViewRepresentable {
     func makeUIView(context: Context) -> MLNMapView {
         let map = MLNMapView(frame: .zero)
         map.styleURL = URL(string: "https://tiles.openfreemap.org/styles/liberty")
+        // Repli quand la position est refusée ou pas encore acquise. Le vrai
+        // cadrage vient de userTrackingMode ci-dessous : l'usage mobile, c'est
+        // « les bâtiments AUTOUR DE MOI » — atterrir sur une ville arbitraire
+        // oblige l'utilisateur à chercher avant de comprendre à quoi sert l'app.
         map.setCenter(.init(latitude: 43.6108, longitude: 3.8767), zoomLevel: 16, animated: false)
         map.minimumZoomLevel = 5
         map.showsUserLocation = true
+        map.userTrackingMode = .follow
+        // Inclinaison : le relief EST le produit. À plat, on ne distingue pas
+        // une passoire de quatre étages d'une maison de plain-pied.
+        map.setCamera(MLNMapCamera(lookingAtCenter: map.centerCoordinate,
+                                   altitude: 600, pitch: 45, heading: 0),
+                      animated: false)
         map.delegate = context.coordinator
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
