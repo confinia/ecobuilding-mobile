@@ -15,13 +15,12 @@ import UIKit
 struct ReportButton: View {
     @ObservedObject var model: BuildingModel
     @State private var phase: Phase = .idle
-    @State private var offer: API.MobileOffer?
     @State private var elapsed = 0
     @State private var pdf: URL?
     @State private var timer: Timer?
 
     enum Phase: Equatable {
-        case idle, running, quota(String), failed
+        case idle, running, failed
     }
 
     var body: some View {
@@ -45,22 +44,16 @@ struct ReportButton: View {
             }
             .disabled(phase == .running || model.buildingID == nil)
 
-            switch phase {
-            case let .quota(message):
-                Text(message).font(.footnote).foregroundStyle(.orange)
-            case .failed:
+            // BÊTA : aucun message de quota ni de prix. Les premiers testeurs
+            // sont des partenaires du métier, pas des clients — leur retour vaut
+            // plus que la vente, et un mur tarifaire en pleine démonstration
+            // devant un client serait un blocage inacceptable. Le mur payant
+            // reviendra avec StoreKit, une fois les retours recueillis.
+            if phase == .failed {
                 Text("La fiche n'a pas pu être générée. Réessayez.")
                     .font(.footnote).foregroundStyle(.orange)
-            default:
-                if let offer {
-                    Text("\(offer.free_reports) fiches offertes, puis "
-                         + String(format: "%.2f", offer.unit_eur).replacingOccurrences(of: ".", with: ",")
-                         + " € l'unité.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
             }
         }
-        .task { offer = try? await API.offer() }
         .sheet(item: $pdf) { url in PDFPreview(url: url) }
     }
 
@@ -86,16 +79,6 @@ struct ReportButton: View {
                 let url = try await API.report(buildingID: id, lon: model.lon, lat: model.lat)
                 phase = .idle
                 pdf = url                       // ouvre le partage système
-            } catch is API.QuotaExhausted {
-                // Jamais d'erreur technique sur un mur payant : on dit ce qui se
-                // passe et ce que ça coûte.
-                let o = offer
-                phase = .quota(o.map { off in
-                    "Vos \(off.free_reports) fiches offertes sont utilisées. "
-                    + "Fiche à l'unité : "
-                    + String(format: "%.2f", off.unit_eur).replacingOccurrences(of: ".", with: ",")
-                    + " €."
-                } ?? "Quota atteint.")
             } catch {
                 phase = .failed
             }
