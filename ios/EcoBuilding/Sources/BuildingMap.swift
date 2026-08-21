@@ -15,6 +15,10 @@ struct BuildingMap: UIViewRepresentable {
     /// Bâtiment touché : identifiant BDNB + point touché (l'arbitrage d'adresse
     /// dépend du point, un « bâtiment groupe » pouvant couvrir plusieurs rues).
     var onSelect: (String, CLLocationCoordinate2D) -> Void
+    /// Point à rejoindre quand une adresse est trouvée. La carte restait
+    /// immobile : on cherchait une adresse à l'autre bout de la France et on
+    /// continuait de regarder son propre quartier.
+    var focus: CLLocationCoordinate2D?
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     private static let sourceID = "bdnb"
@@ -60,13 +64,34 @@ struct BuildingMap: UIViewRepresentable {
         return map
     }
 
-    func updateUIView(_ uiView: MLNMapView, context: Context) {}
+    func updateUIView(_ uiView: MLNMapView, context: Context) {
+        guard let focus, CLLocationCoordinate2DIsValid(focus) else { return }
+        // Ne rejouer l'animation que si la cible a changé.
+        let last = context.coordinator.lastFocus
+        if let last, abs(last.latitude - focus.latitude) < 1e-7,
+           abs(last.longitude - focus.longitude) < 1e-7 { return }
+        context.coordinator.lastFocus = focus
+        // Suivre l'utilisateur ET aller ailleurs sont contradictoires : on
+        // relâche le suivi, sinon la carte revient aussitôt sur lui.
+        uiView.userTrackingMode = .none
+        // Vol en DEUX temps : on prend d'abord du champ, puis on plonge sur la
+        // cible. Un déplacement à zoom constant traverse la France au ras des
+        // toits — illisible, et on ne comprend pas où l'on atterrit.
+        let camera = MLNMapCamera(lookingAtCenter: focus, altitude: 4000,
+                                  pitch: 0, heading: 0)
+        uiView.fly(to: camera, withDuration: 1.6) {
+            let close = MLNMapCamera(lookingAtCenter: focus, altitude: 320,
+                                     pitch: 45, heading: 0)
+            uiView.fly(to: close, withDuration: 1.4, completionHandler: nil)
+        }
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect) }
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
+        var lastFocus: CLLocationCoordinate2D?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
         /// Sert uniquement à lire la position DÉJÀ connue du système au
         /// démarrage, pour ouvrir la carte au bon endroit sans animation.

@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import UIKit
 
@@ -18,6 +19,8 @@ struct ContentView: View {
     @State private var selection: Target?
     @State private var search = ""
     @State private var copied = false
+    /// Point que la carte doit rejoindre (adresse trouvée).
+    @State private var focus: CLLocationCoordinate2D?
 
     /// « v1.0 (12) » : version publique et numéro de compilation, les deux
     /// étant nécessaires — la version publique bouge rarement, le numéro de
@@ -49,12 +52,13 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            BuildingMap { id, coord in
+            BuildingMap(onSelect: { id, coord in
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }
+            }, focus: focus)
             .ignoresSafeArea()
 
             SearchField(text: $search, onPick: { s in
+                focus = CLLocationCoordinate2D(latitude: s.lat, longitude: s.lon)
                 if let ban = s.banID {
                     selection = .suggestion(banID: ban, lon: s.lon, lat: s.lat, label: s.label)
                 } else {
