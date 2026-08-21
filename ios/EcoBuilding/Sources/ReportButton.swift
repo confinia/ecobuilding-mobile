@@ -99,14 +99,24 @@ private struct PDFPreview: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
         let preview = QLPreviewController()
         preview.dataSource = context.coordinator
-        return UINavigationController(rootViewController: preview)
+        // Bouton de fermeture explicite : sans lui, il fallait deviner qu'on
+        // sort en glissant du haut vers le bas.
+        preview.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            title: "Fermer", style: .done,
+            target: context.coordinator, action: #selector(Coordinator.close))
+        let nav = UINavigationController(rootViewController: preview)
+        context.coordinator.nav = nav
+        return nav
     }
     func updateUIViewController(_ vc: UINavigationController, context: Context) {}
     func makeCoordinator() -> Coordinator { Coordinator(url: url) }
 
     final class Coordinator: NSObject, QLPreviewControllerDataSource {
         let url: URL
+        weak var nav: UINavigationController?
         init(url: URL) { self.url = url }
+
+        @objc func close() { nav?.dismiss(animated: true) }
         func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
         func previewController(_ controller: QLPreviewController,
                                previewItemAt index: Int) -> QLPreviewItem {

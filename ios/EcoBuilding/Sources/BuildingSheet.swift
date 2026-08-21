@@ -83,6 +83,7 @@ struct BuildingSheet: View {
     @StateObject private var model = BuildingModel()
 
     var body: some View {
+      VStack(spacing: 0) {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text(model.searched ?? model.address ?? "Bâtiment").font(.title3.bold())
@@ -107,7 +108,6 @@ struct BuildingSheet: View {
                                          schools: model.blocks["schools"],
                                          prices: model.blocks["prices"])
                     IdentitySection(building: b, rnb: model.blocks["rnb"])
-                    ReportButton(model: model)
                 } else {
                     ProgressView().padding(.vertical, 24)
                 }
@@ -122,7 +122,15 @@ struct BuildingSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
         }
-        .task { await model.load(target) }
+        // Bouton ANCRÉ en bas, hors du défilement : il n'apparaissait qu'après
+        // avoir fait défiler toute la fiche, alors que c'est l'objet vendu.
+        if model.building != nil {
+            ReportButton(model: model)
+                .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 6)
+                .background(.regularMaterial)
+        }
+      }
+      .task { await model.load(target) }
     }
 }
 
@@ -204,7 +212,10 @@ private struct BuildingSection: View {
         SectionBox(title: "Bâtiment") {
             Row(label: "Année de construction", value: building["construction_year"]?.intValue.map(String.init))
             Row(label: "Hauteur", value: building["height_m"]?.doubleValue.map { "\(Int($0)) m" })
-            Row(label: "Étages", value: building["floors"]?.intValue.map(String.init))
+            // « Niveaux » et non « Étages » : en français, « 1 étage » se
+            // comprend comme rez-de-chaussée + 1, alors que la BDNB compte des
+            // niveaux — le rez-de-chaussée inclus.
+            Row(label: "Niveaux", value: building["floors"]?.intValue.map(String.init))
             Row(label: "Logements", value: building["dwellings"]?.intValue.map(String.init))
             Row(label: "Murs", value: building["wall_material"]?.stringValue?.capitalized)
             Row(label: "Toiture", value: building["roof_material"]?.stringValue?.capitalized)
