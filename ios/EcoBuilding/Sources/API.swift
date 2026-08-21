@@ -30,15 +30,18 @@ enum API {
     static func suggest(_ text: String) async throws -> [Suggestion] {
         let (data, _) = try await URLSession.shared.data(
             for: request("suggest", query: [.init(name: "q", value: text)]))
+        // La clé est « suggestions » : elle était lue comme « results », donc le
+        // décodage échouait TOUJOURS — et un try? avalait l'erreur, ce qui
+        // donnait une liste vide sans le moindre signe de panne.
         struct Wrapper: Decodable {
             struct Item: Decodable {
                 let label: String, lon: Double, lat: Double
                 let ban_id: String?
             }
-            let results: [Item]
+            let suggestions: [Item]
         }
         let w = try JSONDecoder().decode(Wrapper.self, from: data)
-        return w.results.map { .init(label: $0.label, lon: $0.lon, lat: $0.lat, banID: $0.ban_id) }
+        return w.suggestions.map { .init(label: $0.label, lon: $0.lon, lat: $0.lat, banID: $0.ban_id) }
     }
 
     // MARK: - Fiche bâtiment, AU FIL DE L'EAU
@@ -57,9 +60,22 @@ enum API {
         case failure(status: Int, detail: String)
     }
 
-    /// Flux d'une recherche par adresse. Chaque ligne du corps est un événement.
+    /// Flux d'une recherche par adresse libre (ce que l'utilisateur a tapé).
     static func lookupStream(q: String) -> AsyncThrowingStream<StreamEvent, Error> {
         stream(request("lookup/stream", query: [.init(name: "q", value: q)]))
+    }
+
+    /// Flux d'une suggestion CHOISIE : on tient déjà l'identifiant BAN et le
+    /// point, inutile de refaire géocoder un libellé — et surtout, il ne faut
+    /// pas envoyer « latitude,longitude » dans un champ qui attend une adresse.
+    static func lookupStream(banID: String, lon: Double, lat: Double)
+        -> AsyncThrowingStream<StreamEvent, Error>
+    {
+        stream(request("lookup/stream", query: [
+            .init(name: "ban_id", value: banID),
+            .init(name: "lon", value: String(lon)),
+            .init(name: "lat", value: String(lat)),
+        ]))
     }
 
     /// Flux d'un bâtiment déjà identifié (touche sur la carte).

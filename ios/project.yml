@@ -37,6 +37,10 @@ targets:
         # Connect repose la question du chiffrement à chaque envoi.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Équipe inscrite ICI et pas seulement dans l'interface : chaque
+        # régénération du projet écrase les choix faits dans Xcode, et le
+        # « Team » repassait à None sans prévenir.
+        DEVELOPMENT_TEAM: "38WRV3R7D5"
         PRODUCT_BUNDLE_IDENTIFIER: io.confinia.ecobuilding
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"

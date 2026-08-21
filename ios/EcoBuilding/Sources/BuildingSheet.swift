@@ -28,11 +28,20 @@ final class BuildingModel: ObservableObject {
     private(set) var lon: Double?
     private(set) var lat: Double?
 
-    func load(buildingID id: String, lon: Double, lat: Double) async {
-        self.lon = lon; self.lat = lat
-        let stream = id.isEmpty
-            ? API.lookupStream(q: "\(lat),\(lon)")
-            : API.buildingStream(id: id, lon: lon, lat: lat)
+    func load(_ target: ContentView.Target) async {
+        let stream: AsyncThrowingStream<API.StreamEvent, Error>
+        switch target {
+        case let .building(id, lon, lat):
+            self.lon = lon; self.lat = lat
+            stream = API.buildingStream(id: id, lon: lon, lat: lat)
+        case let .suggestion(banID, lon, lat, label):
+            self.lon = lon; self.lat = lat
+            address = label            // afficher tout de suite ce qu'on a choisi
+            stream = API.lookupStream(banID: banID, lon: lon, lat: lat)
+        case let .freeText(q):
+            address = q
+            stream = API.lookupStream(q: q)
+        }
         do {
             for try await event in stream {
                 switch event {
@@ -62,9 +71,7 @@ final class BuildingModel: ObservableObject {
 }
 
 struct BuildingSheet: View {
-    let buildingID: String
-    let lon: Double
-    let lat: Double
+    let target: ContentView.Target
     @StateObject private var model = BuildingModel()
 
     var body: some View {
@@ -100,7 +107,7 @@ struct BuildingSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
         }
-        .task { await model.load(buildingID: buildingID, lon: lon, lat: lat) }
+        .task { await model.load(target) }
     }
 }
 

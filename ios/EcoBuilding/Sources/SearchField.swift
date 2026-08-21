@@ -8,6 +8,8 @@ import SwiftUI
 struct SearchField: View {
     @Binding var text: String
     var onPick: (API.Suggestion) -> Void
+    /// Validation au clavier ou par la loupe : chercher le texte tel quel.
+    var onSubmit: (String) -> Void
 
     @State private var suggestions: [API.Suggestion] = []
     @State private var task: Task<Void, Never>?
@@ -16,10 +18,17 @@ struct SearchField: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                // La loupe était une simple image : la toucher ne faisait rien.
+                Button {
+                    submit()
+                } label: {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                }
                 TextField("Adresse en France…", text: $text)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .onSubmit { submit() }
                     .focused($focused)
                     // Forme à un paramètre : celle à deux exige iOS 17, or
                     // nous ciblons iOS 16 pour couvrir l'iPhone 8.
@@ -56,6 +65,12 @@ struct SearchField: View {
                 .padding(.top, 4)
             }
         }
+    }
+
+    private func submit() {
+        suggestions = []
+        focused = false
+        onSubmit(text)
     }
 
     /// Anti-rebond : une frappe ne doit pas déclencher une requête par lettre.
