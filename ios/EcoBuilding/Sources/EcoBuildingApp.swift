@@ -29,6 +29,12 @@ struct ContentView: View {
     @State private var pin: CLLocationCoordinate2D?
     /// Point que la carte doit rejoindre (adresse trouvée).
     @State private var focus: CLLocationCoordinate2D?
+    /// Dernière position connue, gardée pour classer les suggestions par
+    /// proximité. `focus` ne peut pas servir : il désigne le point à REJOINDRE,
+    /// pas celui où l'on est.
+    @State private var here: CLLocationCoordinate2D?
+    /// Fiche demandée par double appui : à lancer dès que le bâtiment répond.
+    @State private var wantsReport = false
 
     /// « v1.0 (12) » : version publique et numéro de compilation, les deux
     /// étant nécessaires — la version publique bouge rarement, le numéro de
@@ -65,7 +71,16 @@ struct ContentView: View {
                 highlighted = id
                 pin = coord
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted, aerial: aerial, pin: pin)
+            }, onHighlight: { id in armed = id },
+               onReportWanted: { id, coord in
+                   armed = nil
+                   highlighted = id
+                   pin = coord
+                   wantsReport = true
+                   selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
+               },
+               focus: focus, highlighted: highlighted,
+               aerial: aerial, pin: pin, onLocation: { here = $0 })
             .ignoresSafeArea()
 
             // Bascule plan / photo aérienne. Placée en haut à droite, sous la
@@ -89,7 +104,7 @@ struct ContentView: View {
               }
             }
 
-            SearchField(text: $search, onPick: { s in
+            SearchField(text: $search, near: here, onPick: { s in
                 let point = CLLocationCoordinate2D(latitude: s.lat, longitude: s.lon)
                 focus = point
                 pin = point
@@ -151,7 +166,7 @@ struct ContentView: View {
         .sheet(item: $selection) { target in
             BuildingSheet(target: target, onBuildingResolved: { id in
                 highlighted = id
-            })
+            }, autoReport: $wantsReport)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 // La carte reste MANIPULABLE tant que la fiche est à

@@ -14,6 +14,7 @@ import UIKit
 /// serait une fiction : un rendu serveur unique n'expose aucune progression.
 struct ReportButton: View {
     @ObservedObject var model: BuildingModel
+    var autoStart: Binding<Bool> = .constant(false)
     @State private var phase: Phase = .idle
     @State private var elapsed = 0
     @State private var pdf: URL?
@@ -65,6 +66,14 @@ struct ReportButton: View {
         // peut la toucher, ou on ne la voit pas.
         .fullScreenCover(item: $pdf) { url in PDFPreview(url: url) }
         .task { quota = try? await API.quota() }
+        // Double appui sur la carte : la fiche part dès que le bâtiment a
+        // répondu, sans passer par le bouton.
+        .onChange(of: model.buildingID) { id in
+            if autoStart.wrappedValue, id != nil, phase != .running {
+                autoStart.wrappedValue = false
+                download()
+            }
+        }
     }
 
     private var stageLabel: String {
