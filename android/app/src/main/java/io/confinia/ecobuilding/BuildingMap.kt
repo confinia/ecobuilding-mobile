@@ -141,11 +141,16 @@ fun BuildingMap(
                 visibility(if (aerial) org.maplibre.android.style.layers.Property.VISIBLE
                            else org.maplibre.android.style.layers.Property.NONE))
             // Sur la photo, les volumes cachent précisément le toit qu'on vient
-            // regarder : on les retire, le contour suffit à désigner.
-            val volumes = if (aerial) org.maplibre.android.style.layers.Property.NONE
-                          else org.maplibre.android.style.layers.Property.VISIBLE
-            map.style?.getLayer(MapIds.LAYER)?.setProperties(visibility(volumes))
-            map.style?.getLayer(MapIds.SELECTED)?.setProperties(visibility(volumes))
+            // regarder : on les efface, le contour suffit à désigner.
+            //
+            // Transparents, et non masqués : MapLibre n'interroge que les
+            // couches RENDUES. Une couche invisible ne répond plus à
+            // queryRenderedFeatures, et toucher un bâtiment en vue photo ne
+            // sélectionnait plus rien — le geste même qu'on vient chercher ici.
+            val opacity = if (aerial) 0f else 0.9f
+            map.style?.getLayer(MapIds.LAYER)?.setProperties(fillExtrusionOpacity(opacity))
+            map.style?.getLayer(MapIds.SELECTED)
+                ?.setProperties(fillExtrusionOpacity(if (aerial) 0f else 1f))
 
             // La permission peut être accordée APRÈS le premier affichage :
             // on réessaie tant que le point bleu n'est pas posé.

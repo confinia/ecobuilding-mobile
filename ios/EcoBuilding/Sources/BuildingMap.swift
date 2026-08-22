@@ -93,11 +93,18 @@ struct BuildingMap: UIViewRepresentable {
         // La photo est opaque et posée au-dessus du plan : la rendre visible
         // suffit, rien à masquer. Nos volumes, ajoutés après, restent dessus.
         context.coordinator.aerialLayer?.isVisible = aerial
-        // Sur la photo, on masque les volumes : ils cachent précisément le
+        // Sur la photo, on efface les volumes : ils cachent précisément le
         // bâtiment qu'on est venu regarder. Le contour, lui, reste.
+        //
+        // Transparents, et non masqués : MapLibre n'interroge que les couches
+        // RENDUES. Masquée, la couche des volumes ne répondait plus à
+        // `visibleFeatures`, et toucher un bâtiment en vue photo ne
+        // sélectionnait plus rien — le geste même qu'on vient chercher ici.
         if let style = uiView.style {
-            style.layer(withIdentifier: BuildingMap.layerID)?.isVisible = !aerial
-            style.layer(withIdentifier: BuildingMap.selectedLayerID)?.isVisible = !aerial
+            (style.layer(withIdentifier: BuildingMap.layerID) as? MLNFillExtrusionStyleLayer)?
+                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0 : 0.9)
+            (style.layer(withIdentifier: BuildingMap.selectedLayerID) as? MLNFillExtrusionStyleLayer)?
+                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0 : 1.0)
         }
         // Épingle : un repère qui survit au changement de fond et au zoom.
         if let pin, CLLocationCoordinate2DIsValid(pin) {
