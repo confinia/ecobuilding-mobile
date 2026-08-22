@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Destination TestFlight / App Store. « development » produirait un IPA
+       qu'App Store Connect refuse. -->
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>teamID</key>
+  <string>38WRV3R7D5</string>
+  <!-- Le symbolisant : sans lui, les rapports de plantage TestFlight arrivent
+       en adresses mémoire, illisibles. -->
+  <key>uploadSymbols</key>
+  <true/>
+  <key>signingStyle</key>
+  <string>automatic</string>
+</dict>
+</plist>
