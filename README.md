@@ -36,6 +36,25 @@ $ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debu
 `local.properties` (chemin du SDK) est **local** et n'est pas versionné ;
 `assembleDebug` le crée au besoin, ou écrivez-y `sdk.dir=$ANDROID_HOME`.
 
+### Émulateur
+
+```sh
+sdkmanager --sdk_root="$ANDROID_HOME" --install emulator \
+  "system-images;android-35;google_apis;arm64-v8a" "cmdline-tools;latest"
+$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd -n eco35 \
+  -k "system-images;android-35;google_apis;arm64-v8a" -d pixel_6
+$ANDROID_HOME/emulator/emulator -avd eco35 -gpu swiftshader_indirect -no-audio &
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb emu geo fix 1.319551 43.593142        # position simulée
+```
+
+Utilisez l'`avdmanager` **du SDK**, pas celui de Homebrew : ce dernier ne
+retrouve pas les images installées.
+
+L'émulateur mérite le détour : les défauts les plus coûteux — un `JsonNull` qui
+fait tomber l'app, une expression de couleur mal résolue, un bouton hors écran —
+ne se voient pas à la compilation.
+
 L'application vise Android 8.0 (API 26) et au-delà : cela couvre la quasi-
 totalité du parc encore en service, sans traîner de code de compatibilité pour
 des versions que plus personne n'utilise.
@@ -58,6 +77,22 @@ ios-deploy --bundle <chemin>/EcoBuilding.app        # sans fil ou par câble
 **Compiler en Release**, pas en Debug : la configuration Debug embarque des
 bibliothèques de débogage qui empêchent l'app de démarrer seule depuis l'écran
 d'accueil.
+
+### Simulateur
+
+```sh
+xcodebuild -downloadPlatform iOS          # ~8,5 Go, une seule fois
+xcrun simctl boot "iPhone 17"
+xcodebuild -project EcoBuilding.xcodeproj -scheme EcoBuilding \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath dd build
+xcrun simctl install "iPhone 17" dd/Build/Products/Debug-iphonesimulator/EcoBuilding.app
+xcrun simctl launch "iPhone 17" io.confinia.ecobuilding
+xcrun simctl location "iPhone 17" set 43.593142,1.319551   # position simulée
+xcrun simctl io "iPhone 17" screenshot vue.png
+```
+
+L'identifiant est `io.confinia.ecobuilding`, **en minuscules** : `simctl` refuse
+d'ouvrir l'app si l'on se fie à la casse du nom de cible.
 
 ## Distribution
 
