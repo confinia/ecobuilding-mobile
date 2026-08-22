@@ -103,11 +103,14 @@ private struct PDFPreview: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
         let preview = QLPreviewController()
         preview.dataSource = context.coordinator
-        // Bouton de fermeture explicite : sans lui, il fallait deviner qu'on
-        // sort en glissant du haut vers le bas.
+        // Une CROIX, pas le mot « Fermer » : un symbole se reconnaît sans
+        // lecture, tient dans un coin, et ne pousse pas le titre du document
+        // hors de l'écran.
         preview.navigationItem.leftBarButtonItem = UIBarButtonItem(
-            title: "Fermer", style: .done,
+            image: UIImage(systemName: "xmark.circle.fill"), style: .plain,
             target: context.coordinator, action: #selector(Coordinator.close))
+        preview.navigationItem.leftBarButtonItem?.accessibilityLabel = "Fermer"
+        preview.navigationItem.leftBarButtonItem?.tintColor = .secondaryLabel
         let nav = UINavigationController(rootViewController: preview)
         context.coordinator.nav = nav
         return nav
