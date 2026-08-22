@@ -56,7 +56,13 @@ private fun Screen() {
     var aerial by remember { mutableStateOf(false) }
     var quota by remember { mutableStateOf<Quota?>(null) }
     var report by remember { mutableStateOf<java.io.File?>(null) }
+    /** Fiche demandée par double appui : à lancer dès que le bâtiment répond. */
+    var wantsReport by remember { mutableStateOf(false) }
     var located by remember { mutableStateOf(UserLocation.granted(context)) }
+    /// Dernière position connue, gardée pour classer les suggestions par
+    /// proximité — `focus` ne peut pas servir : il est remis à zéro après
+    /// chaque vol de caméra.
+    var here by remember { mutableStateOf<LatLon?>(null) }
     val model = remember(target) { BuildingModel() }
 
     // La position sert à ouvrir la carte là où l'utilisateur se trouve : sans
@@ -72,7 +78,10 @@ private fun Screen() {
     LaunchedEffect(located) {
         // Une adresse déjà cherchée l'emporte : on ne ramène pas la caméra.
         if (located && focus == null) {
-            UserLocation.once(context) { point -> if (focus == null) focus = point }
+            UserLocation.once(context) { point ->
+                here = LatLon(point.latitude, point.longitude)
+                if (focus == null) focus = point
+            }
         }
     }
 
@@ -87,6 +96,11 @@ private fun Screen() {
             aerial = aerial, showUser = located, pin = pin,
             highlighted = highlighted, focus = focus,
             onArmed = { armed = it },
+            onReportWanted = { id, point ->
+                armed = null; highlighted = id; focus = null; pin = point
+                target = Target.Building(id, point.longitude, point.latitude)
+                wantsReport = true
+            },
             onSelect = { id, point ->
                 armed = null; highlighted = id; focus = null; pin = point
                 target = Target.Building(id, point.longitude, point.latitude)
@@ -197,7 +211,7 @@ private fun Screen() {
     LaunchedEffect(search) {
         if (search.length < 3) { suggestions = emptyList(); return@LaunchedEffect }
         delay(250)
-        suggestions = runCatching { Api.suggest(context, search) }.getOrDefault(emptyList())
+        suggestions = runCatching { Api.suggest(context, search, here) }.getOrDefault(emptyList())
     }
 
     // La fiche PDF recouvre TOUT, comme sur iPhone : on ne quitte plus l'app
@@ -224,7 +238,8 @@ private fun Screen() {
         ModalBottomSheet(onDismissRequest = { target = null },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             BuildingSheet(model, quota, onClose = { target = null },
-                onQuotaChanged = { quota = it }, onReport = { report = it })
+                onQuotaChanged = { quota = it }, onReport = { report = it },
+                autoStart = wantsReport, onAutoStarted = { wantsReport = false })
         }
     }
 }

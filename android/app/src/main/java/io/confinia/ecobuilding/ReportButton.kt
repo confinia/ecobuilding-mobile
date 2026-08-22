@@ -32,7 +32,8 @@ import java.io.File
  */
 @Composable
 fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -> Unit,
-                 onReport: (File) -> Unit) {
+                 onReport: (File) -> Unit,
+                 autoStart: Boolean = false, onAutoStarted: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
@@ -44,28 +45,37 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
         while (running && isActive) { delay(1000); elapsed += 1 }
     }
 
+    // Le téléchargement est décrit une seule fois : le bouton l'appelle, et le
+    // double appui sur la carte aussi. Deux copies auraient divergé.
+    val start = {
+        val id = model.buildingId
+        if (id != null && !running) {
+            error = null
+            running = true
+            scope.launch {
+                try {
+                    val file = Api.report(context, id, model.lon, model.lat)
+                    onReport(file)
+                    onQuotaChanged(runCatching { Api.quota(context) }.getOrNull())
+                } catch (e: ReportError) {
+                    error = e.detail.ifBlank { "La fiche n'a pas pu être générée. Réessayez." }
+                } catch (e: Exception) {
+                    error = "La fiche n'a pas pu être générée. Réessayez."
+                } finally {
+                    running = false
+                }
+            }
+        }
+    }
+
+    // Double appui sur la carte : la fiche part dès que le bâtiment a répondu.
+    LaunchedEffect(autoStart, model.buildingId) {
+        if (autoStart && model.buildingId != null) { onAutoStarted(); start() }
+    }
+
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(
-            onClick = {
-                val id = model.buildingId ?: return@Button
-                error = null
-                running = true
-                scope.launch {
-                    try {
-                        val file = Api.report(context, id, model.lon, model.lat)
-                        onReport(file)
-                        onQuotaChanged(runCatching { Api.quota(context) }.getOrNull())
-                    } catch (e: ReportError) {
-                        // Le serveur sait pourquoi il refuse (limite atteinte,
-                        // paiement requis) : son message vaut mieux que le nôtre.
-                        error = e.detail.ifBlank { "La fiche n'a pas pu être générée. Réessayez." }
-                    } catch (e: Exception) {
-                        error = "La fiche n'a pas pu être générée. Réessayez."
-                    } finally {
-                        running = false
-                    }
-                }
-            },
+            onClick = { start() },
             enabled = !running && model.buildingId != null,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             // La couleur du TEXTE doit être dite : sans elle, Material peint le

@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 /// Recherche d'adresse, avec suggestions de la Base Adresse Nationale.
@@ -7,6 +8,8 @@ import SwiftUI
 /// de l'app, avant même la carte.
 struct SearchField: View {
     @Binding var text: String
+    /// Position connue, pour classer les suggestions par proximité.
+    var near: CLLocationCoordinate2D?
     var onPick: (API.Suggestion) -> Void
     /// Validation au clavier ou par la loupe : chercher le texte tel quel.
     var onSubmit: (String) -> Void
@@ -89,7 +92,7 @@ struct SearchField: View {
         task = Task {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
-            suggestions = (try? await API.suggest(value)) ?? []
+            suggestions = (try? await API.suggest(value, near: near)) ?? []
         }
     }
 }

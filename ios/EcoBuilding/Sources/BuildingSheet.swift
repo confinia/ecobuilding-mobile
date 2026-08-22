@@ -89,6 +89,9 @@ struct BuildingSheet: View {
     /// Remonte l'identifiant dès que le flux l'a livré, pour que la carte
     /// puisse mettre le bâtiment en évidence.
     var onBuildingResolved: (String) -> Void = { _ in }
+    /// Fiche réclamée par un double appui sur la carte : le bouton se déclenche
+    /// seul dès que le bâtiment a répondu.
+    var autoReport: Binding<Bool> = .constant(false)
     @StateObject private var model = BuildingModel()
 
     var body: some View {
@@ -134,7 +137,7 @@ struct BuildingSheet: View {
         // Bouton ANCRÉ en bas, hors du défilement : il n'apparaissait qu'après
         // avoir fait défiler toute la fiche, alors que c'est l'objet vendu.
         if model.building != nil {
-            ReportButton(model: model)
+            ReportButton(model: model, autoStart: autoReport)
                 .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 6)
                 .background(.regularMaterial)
         }

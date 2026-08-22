@@ -16,6 +16,7 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression.*
 import org.maplibre.android.style.layers.FillExtrusionLayer
+import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.*
 import org.maplibre.android.style.layers.RasterLayer
@@ -53,13 +54,19 @@ object MapIds {
     /**
      * Limites de parcelles cadastrales — IGN, Licence Ouverte, sans clé.
      *
-     * « Où s'arrêtent les terrains ? » est une des premières questions d'un
-     * acheteur, et la photo seule n'y répond pas. Tuiles PNG transparentes, à
-     * poser au-dessus de l'orthophoto.
+     * « Où s'arrête le terrain ? » est une des premières questions d'un
+     * acheteur, et la photo seule n'y répond pas.
+     *
+     * Tuiles VECTORIELLES, et non l'image toute faite : celle-ci imprime le
+     * numéro de chaque parcelle sur la carte. Illisible et sans intérêt à
+     * l'écran — un numéro cadastral ne dit rien à personne devant un bâtiment,
+     * et il recouvrait le reste. Ici on ne dessine que les limites.
      */
-    const val PARCELLAIRE = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
-        "&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI%20vecteur&TILEMATRIXSET=PM" +
-        "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
+    const val PARCELLAIRE = "https://data.geopf.fr/tms/1.0.0/PCI/{z}/{x}/{y}.pbf"
+    const val PARCELS_LAYER = "parcelle"
+    const val PARCEL_SELECTED = "parcelle-selectionnee"
+    /** Identifiant unique de parcelle, porté par chaque entité du cadastre. */
+    const val PARCEL_KEY = "idu"
 
     const val OPEN_ZOOM = 10.0
     const val WORK_ZOOM = 17.0
@@ -111,6 +118,8 @@ fun BuildingMap(
     focus: LatLng?,
     onArmed: (String?) -> Unit,
     onSelect: (String, LatLng) -> Unit,
+    /** Double appui : on saute la fiche et on sort directement le document. */
+    onReportWanted: (String, LatLng) -> Unit,
 ) {
     val state = remember { MapState() }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -154,8 +163,13 @@ fun BuildingMap(
                     }
                     map.cameraPosition = CameraPosition.Builder()
                         .target(LatLng(46.6, 2.5)).zoom(4.5).build()
+                    map.addOnCameraIdleListener { state.resolvePendingParcel(map) }
+                    // Le double appui zoomait — comportement par défaut de
+                    // MapLibre, hérité sans l'avoir choisi. À 30° et au niveau
+                    // de travail, ce zoom était presque toujours subi.
+                    map.uiSettings.isDoubleTapGesturesEnabled = false
                     map.addOnMapClickListener { point ->
-                        state.handleTap(map, point, onArmed, onSelect)
+                        state.handleTap(map, point, onArmed, onSelect, onReportWanted)
                         true
                     }
                 }
@@ -174,11 +188,6 @@ fun BuildingMap(
             // queryRenderedFeatures, et toucher un bâtiment en vue photo ne
             // sélectionnait plus rien — le geste même qu'on vient chercher ici.
             state.aerial = aerial
-            // Les limites ne s'affichent qu'AVEC la photo : sur le plan, elles
-            // parasiteraient une lecture qui porte sur les bâtiments.
-            map.style?.getLayer(MapIds.PARCELS)?.setProperties(
-                visibility(if (aerial) org.maplibre.android.style.layers.Property.VISIBLE
-                           else org.maplibre.android.style.layers.Property.NONE))
             val opacity = if (aerial) 0.01f else 0.9f
             map.style?.getLayer(MapIds.LAYER)?.setProperties(fillExtrusionOpacity(opacity))
             map.style?.getLayer(MapIds.SELECTED)
@@ -192,6 +201,9 @@ fun BuildingMap(
             if (pin != state.lastPin) {
                 state.lastPin = pin
                 state.movePin(map, pin)
+                // Après une recherche d'adresse, la parcelle se retrouve depuis
+                // l'épingle — mais seulement quand la caméra sera arrivée.
+                state.parcelPending = pin
             }
             if (state.lastHighlighted != highlighted) {
                 state.lastHighlighted = highlighted
@@ -212,10 +224,13 @@ private class MapState {
     var lastHighlighted: String? = null
     var lastFocus: LatLng? = null
     var lastPin: LatLng? = null
+    /** Point dont la parcelle reste à retrouver, une fois les tuiles arrivées. */
+    var parcelPending: LatLng? = null
     var userDotOn = false
     var aerial = false
     /** Bâtiment désigné par le premier appui, en attente de confirmation. */
     private var armed: String? = null
+    private var armedAt = 0L
 
     /** Le point bleu : sans lui, on ne sait pas d'où l'on regarde. */
     @SuppressLint("MissingPermission")
@@ -246,6 +261,27 @@ private class MapState {
             source.setGeoJson(org.maplibre.geojson.Feature.fromGeometry(
                 org.maplibre.geojson.Point.fromLngLat(point.longitude, point.latitude)))
         }
+    }
+
+    /**
+     * Met en avant la parcelle sous un point de l'écran.
+     *
+     * On interroge la carte plutôt que le serveur : les limites sont déjà
+     * chargées pour être dessinées, et une requête réseau de plus ferait
+     * attendre pour une information qu'on a sous la main.
+     */
+    fun selectParcel(map: MapLibreMap, screen: PointF) {
+        val idu = map.queryRenderedFeatures(screen, MapIds.PARCELS, MapIds.PARCEL_SELECTED)
+            .firstOrNull()?.getStringProperty(MapIds.PARCEL_KEY)
+        map.style?.getLayerAs<FillLayer>(MapIds.PARCEL_SELECTED)
+            ?.setFilter(eq(get(MapIds.PARCEL_KEY), literal(idu ?: "")))
+    }
+
+    /** Après un vol, les tuiles ne sont là qu'une fois la caméra posée. */
+    fun resolvePendingParcel(map: MapLibreMap) {
+        val point = parcelPending ?: return
+        parcelPending = null
+        selectParcel(map, map.projection.toScreenLocation(point))
     }
 
     fun applyHighlight(id: String?) {
@@ -285,7 +321,8 @@ private class MapState {
      * cherche donc aussi sous le point touché.
      */
     fun handleTap(map: MapLibreMap, point: LatLng,
-                  onArmed: (String?) -> Unit, onSelect: (String, LatLng) -> Unit) {
+                  onArmed: (String?) -> Unit, onSelect: (String, LatLng) -> Unit,
+                  onReportWanted: (String, LatLng) -> Unit) {
         val screen = map.projection.toScreenLocation(point)
         val id = pick(map, screen)
         if (id == null) {
@@ -296,11 +333,16 @@ private class MapState {
         }
         applyHighlight(id)
         if (armed == id) {
+            val now = android.os.SystemClock.uptimeMillis()
             armed = null
             onArmed(null)
-            onSelect(id, point)
+            selectParcel(map, screen)
+            // Deux appuis RAPPROCHÉS valent double appui : on sort le document.
+            // Posés, ils ouvrent la fiche à l'écran. C'est le délai qui décide.
+            if (now - armedAt <= 320) onReportWanted(id, point) else onSelect(id, point)
         } else {
             armed = id
+            armedAt = android.os.SystemClock.uptimeMillis()
             onArmed(id)
         }
     }
@@ -409,13 +451,29 @@ private fun installLayers(context: android.content.Context, style: Style) {
     style.addLayer(RasterLayer(MapIds.AERIAL, MapIds.AERIAL + "-src").withProperties(
         visibility(org.maplibre.android.style.layers.Property.NONE)))
 
-    style.addSource(RasterSource(MapIds.PARCELS + "-src",
-        TileSet("2.2.0", MapIds.PARCELLAIRE), 256))
-    style.addLayer(RasterLayer(MapIds.PARCELS, MapIds.PARCELS + "-src").withProperties(
-        visibility(org.maplibre.android.style.layers.Property.NONE),
-        // Assez marqué pour se lire sur une toiture claire comme sur des
-        // arbres, sans masquer la photo qu'on est venu regarder.
-        rasterOpacity(0.85f)))
+    style.addSource(VectorSource(MapIds.PARCELS + "-src",
+        TileSet("2.2.0", MapIds.PARCELLAIRE).apply {
+            minZoom = 13f
+            maxZoom = 16f
+        }))
+    // La parcelle du bâtiment choisi, en aplat translucide : le bâtiment seul
+    // ne dit pas ce qu'on achète. Le terrain autour compte autant — c'est lui
+    // qu'on arpente, qu'on plante, où l'on gare la voiture.
+    style.addLayer(FillLayer(MapIds.PARCEL_SELECTED, MapIds.PARCELS + "-src").apply {
+        sourceLayer = MapIds.PARCELS_LAYER
+        minZoom = 15f
+        setFilter(eq(get(MapIds.PARCEL_KEY), literal("")))
+        withProperties(fillColor(Color.rgb(0, 224, 255)), fillOpacity(0.22f))
+    })
+    style.addLayer(LineLayer(MapIds.PARCELS, MapIds.PARCELS + "-src").apply {
+        sourceLayer = MapIds.PARCELS_LAYER
+        // En dessous, les limites forment une bouillie de traits.
+        minZoom = 15f
+        withProperties(
+            // Assez marqué pour se lire sur une toiture claire comme sur des
+            // arbres, sans masquer ce qu'on est venu regarder.
+            lineColor(Color.rgb(255, 138, 0)), lineWidth(1.6f), lineOpacity(0.9f))
+    })
 
     style.addSource(VectorSource(MapIds.SOURCE, TileSet("2.2.0", MapIds.TILES).apply {
         minZoom = 14f

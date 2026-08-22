@@ -18,6 +18,8 @@ struct BuildingMap: UIViewRepresentable {
     var onSelect: (String, CLLocationCoordinate2D) -> Void
     /// Bâtiment simplement DÉSIGNÉ (premier appui), pour l'annoncer à l'écran.
     var onHighlight: (String?) -> Void = { _ in }
+    /// Double appui : on saute la fiche et on sort directement le document.
+    var onReportWanted: (String, CLLocationCoordinate2D) -> Void = { _, _ in }
     /// Point à rejoindre quand une adresse est trouvée. La carte restait
     /// immobile : on cherchait une adresse à l'autre bout de la France et on
     /// continuait de regarder son propre quartier.
@@ -31,6 +33,9 @@ struct BuildingMap: UIViewRepresentable {
     var aerial: Bool = false
     /// Épingle posée sur le bâtiment concerné.
     var pin: CLLocationCoordinate2D?
+    /// Remonte la position de l'utilisateur dès qu'elle est connue : elle sert
+    /// à classer les suggestions d'adresses par proximité.
+    var onLocation: (CLLocationCoordinate2D) -> Void = { _ in }
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /// Vue d'ouverture, avant la plongée : assez large pour situer le quartier.
@@ -44,14 +49,19 @@ struct BuildingMap: UIViewRepresentable {
     private static let layerID = "bdnb-dpe-3d"
     fileprivate static let aerialLayerID = "ign-ortho"
     fileprivate static let parcelsLayerID = "ign-parcelles"
+    fileprivate static let parcelFillID = "parcelle-selectionnee"
+    /// Identifiant unique de parcelle, porté par chaque entité du cadastre.
+    fileprivate static let parcelKey = "idu"
     /// Limites de parcelles cadastrales — IGN, Licence Ouverte, sans clé.
     ///
-    /// « Où s'arrêtent les terrains ? » est une des premières questions d'un
+    /// « Où s'arrête le terrain ? » est une des premières questions d'un
     /// acheteur, et la photo seule n'y répond pas.
-    fileprivate static let parcelsURL =
-        "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
-        + "&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI%20vecteur&TILEMATRIXSET=PM"
-        + "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
+    ///
+    /// Tuiles VECTORIELLES, et non l'image toute faite : celle-ci imprime le
+    /// numéro de chaque parcelle sur la carte. Illisible et sans intérêt à
+    /// l'écran — un numéro cadastral ne dit rien à personne devant un
+    /// bâtiment, et il recouvrait le reste. Ici on ne dessine que les limites.
+    fileprivate static let parcelsURL = "https://data.geopf.fr/tms/1.0.0/PCI/{z}/{x}/{y}.pbf"
     fileprivate static let outlineLayerID = "bdnb-selected-outline"
     /// Photo aérienne de l'IGN — Licence Ouverte, sans clé ni compte.
     /// C'est elle qui montre ce qu'un acheteur veut voir : le terrain, les
@@ -94,6 +104,16 @@ struct BuildingMap: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
         map.addGestureRecognizer(tap)
+        // Le double appui zoomait — comportement par défaut de MapLibre, hérité
+        // sans l'avoir choisi. À 60° et au niveau de travail, ce zoom était
+        // presque toujours subi.
+        map.allowsZooming = true
+        for recognizer in map.gestureRecognizers ?? [] {
+            if let double = recognizer as? UITapGestureRecognizer,
+               double !== tap, double.numberOfTapsRequired == 2 {
+                double.isEnabled = false
+            }
+        }
         context.coordinator.map = map
         return map
     }
@@ -102,9 +122,6 @@ struct BuildingMap: UIViewRepresentable {
         // La photo est opaque et posée au-dessus du plan : la rendre visible
         // suffit, rien à masquer. Nos volumes, ajoutés après, restent dessus.
         context.coordinator.aerialLayer?.isVisible = aerial
-        // Les limites ne s'affichent qu'AVEC la photo : sur le plan, elles
-        // parasiteraient une lecture qui porte sur les bâtiments.
-        context.coordinator.parcelsLayer?.isVisible = aerial
         // Sur la photo, on efface les volumes : ils cachent précisément le
         // bâtiment qu'on est venu regarder. Le contour, lui, reste.
         //
@@ -164,13 +181,19 @@ struct BuildingMap: UIViewRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect, onHighlight: onHighlight) }
+    func makeCoordinator() -> Coordinator {
+        let coordinator = Coordinator(onSelect: onSelect, onHighlight: onHighlight)
+        coordinator.onLocation = onLocation
+        coordinator.onReportWanted = onReportWanted
+        return coordinator
+    }
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         var aerialLayer: MLNRasterStyleLayer?
-        var parcelsLayer: MLNRasterStyleLayer?
+        var parcelsLayer: MLNLineStyleLayer?
+        var parcelFill: MLNFillStyleLayer?
         var outlineLayer: MLNLineStyleLayer?
         var pinAnnotation: MLNPointAnnotation?
         var lastFocus: CLLocationCoordinate2D?
@@ -184,6 +207,10 @@ struct BuildingMap: UIViewRepresentable {
         let locations = CLLocationManager()
         private var didCenter = false
 
+        var onLocation: (CLLocationCoordinate2D) -> Void = { _ in }
+        var onReportWanted: (String, CLLocationCoordinate2D) -> Void = { _, _ in }
+        private var armedAt = Date.distantPast
+
         init(onSelect: @escaping (String, CLLocationCoordinate2D) -> Void,
              onHighlight: @escaping (String?) -> Void) {
             self.onSelect = onSelect
@@ -195,6 +222,9 @@ struct BuildingMap: UIViewRepresentable {
         /// Premier point reçu quand aucune position n'était connue : on zoome
         /// depuis la vue d'ensemble, sans traversée latérale.
         func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
+            if let coord = userLocation?.coordinate, CLLocationCoordinate2DIsValid(coord) {
+                onLocation(coord)
+            }
             guard !didCenter, let coord = userLocation?.coordinate,
                   CLLocationCoordinate2DIsValid(coord) else { return }
             didCenter = true
@@ -245,22 +275,42 @@ struct BuildingMap: UIViewRepresentable {
             style.addLayer(orthoLayer)      // au-dessus du plan, sous nos volumes
             aerialLayer = orthoLayer
 
-            let parcels = MLNRasterTileSource(
+            let parcels = MLNVectorTileSource(
                 identifier: "ign-parcelles-src",
                 tileURLTemplates: [BuildingMap.parcelsURL],
-                options: [.tileSize: 256,
+                options: [.minimumZoomLevel: 13, .maximumZoomLevel: 16,
                           .attributionInfos: [
                               MLNAttributionInfo(title: NSAttributedString(string: "IGN — Parcellaire Express"),
                                                  url: URL(string: "https://geoservices.ign.fr"))
                           ]])
             style.addSource(parcels)
-            let parcelsLayer = MLNRasterStyleLayer(identifier: BuildingMap.parcelsLayerID,
-                                                   source: parcels)
-            parcelsLayer.isVisible = false
+            // La parcelle du bâtiment choisi, en aplat translucide : le
+            // bâtiment seul ne dit pas ce qu'on achète. Le terrain autour
+            // compte autant — c'est lui qu'on arpente, qu'on plante, où l'on
+            // gare la voiture.
+            let parcelFill = MLNFillStyleLayer(identifier: BuildingMap.parcelFillID,
+                                               source: parcels)
+            parcelFill.sourceLayerIdentifier = "parcelle"
+            parcelFill.minimumZoomLevel = 15
+            parcelFill.predicate = NSPredicate(format: "%K == %@", BuildingMap.parcelKey, "")
+            parcelFill.fillColor = NSExpression(forConstantValue: UIColor(red: 0, green: 0.88,
+                                                                          blue: 1, alpha: 1))
+            parcelFill.fillOpacity = NSExpression(forConstantValue: 0.22)
+            style.addLayer(parcelFill)
+            self.parcelFill = parcelFill
+
+            let parcelsLayer = MLNLineStyleLayer(identifier: BuildingMap.parcelsLayerID,
+                                                 source: parcels)
+            parcelsLayer.sourceLayerIdentifier = "parcelle"
+            // En dessous, les limites forment une bouillie de traits.
+            parcelsLayer.minimumZoomLevel = 15
             // Assez marqué pour se lire sur une toiture claire comme sur des
-            // arbres, sans masquer la photo qu'on est venu regarder.
-            parcelsLayer.rasterOpacity = NSExpression(forConstantValue: 0.85)
-            style.addLayer(parcelsLayer)    // au-dessus de la photo
+            // arbres, sans masquer ce qu'on est venu regarder.
+            parcelsLayer.lineColor = NSExpression(forConstantValue: UIColor(red: 1, green: 0.54,
+                                                                            blue: 0, alpha: 1))
+            parcelsLayer.lineWidth = NSExpression(forConstantValue: 1.6)
+            parcelsLayer.lineOpacity = NSExpression(forConstantValue: 0.9)
+            style.addLayer(parcelsLayer)
             self.parcelsLayer = parcelsLayer
 
             let source = MLNVectorTileSource(
@@ -446,6 +496,20 @@ struct BuildingMap: UIViewRepresentable {
             return inside
         }
 
+        /// Met en avant la parcelle sous un point de l'écran.
+        ///
+        /// On interroge la carte plutôt que le serveur : les limites sont déjà
+        /// chargées pour être dessinées, et une requête réseau de plus ferait
+        /// attendre pour une information qu'on a sous la main.
+        func selectParcel(at point: CGPoint, on map: MLNMapView) {
+            let hits = map.visibleFeatures(
+                at: point, styleLayerIdentifiers: [BuildingMap.parcelsLayerID,
+                                                   BuildingMap.parcelFillID])
+            let idu = hits.first?.attribute(forKey: BuildingMap.parcelKey) as? String
+            parcelFill?.predicate = NSPredicate(format: "%K == %@",
+                                                BuildingMap.parcelKey, idu ?? "")
+        }
+
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let map, gesture.state == .ended else { return }
             let point = gesture.location(in: map)
@@ -472,11 +536,18 @@ struct BuildingMap: UIViewRepresentable {
             // manqué ne doit pas coûter un chargement complet, ni ouvrir la
             // fiche d'un bâtiment qu'on ne visait pas.
             if armed == id {
+                let quick = Date().timeIntervalSince(armedAt) <= 0.32
                 armed = nil
                 onHighlight(nil)
-                onSelect(id, map.convert(point, toCoordinateFrom: map))
+                selectParcel(at: point, on: map)
+                let coord = map.convert(point, toCoordinateFrom: map)
+                // Deux appuis RAPPROCHÉS valent double appui : on sort le
+                // document. Posés, ils ouvrent la fiche à l'écran. C'est le
+                // délai qui décide.
+                if quick { onReportWanted(id, coord) } else { onSelect(id, coord) }
             } else {
                 armed = id
+                armedAt = Date()
                 onHighlight(id)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }

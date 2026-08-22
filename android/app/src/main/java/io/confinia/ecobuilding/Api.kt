@@ -49,6 +49,9 @@ sealed interface StreamEvent {
     data class Failure(val status: Int, val detail: String) : StreamEvent
 }
 
+/** Un point, sans dépendre de MapLibre : le client d'API doit rester nu. */
+data class LatLon(val lat: Double, val lon: Double)
+
 data class Suggestion(
     val label: String, val lon: Double, val lat: Double, val banId: String?,
 )
@@ -85,9 +88,16 @@ object Api {
 
     // --- Recherche d'adresse -------------------------------------------------
 
-    suspend fun suggest(context: Context, text: String): List<Suggestion> =
+    /**
+     * Suggestions d'adresses, CLASSÉES PAR PROXIMITÉ quand la position est
+     * connue. L'usage mobile est local : on est devant le bâtiment, ou on
+     * prépare une visite dans le quartier. Sans ce repère, chercher « ecole »
+     * proposait des écoles de toute la France.
+     */
+    suspend fun suggest(context: Context, text: String, near: LatLon? = null): List<Suggestion> =
         withIo {
-            val conn = open(context, "suggest?q=${enc(text)}")
+            val around = near?.let { "&lat=${it.lat}&lon=${it.lon}" } ?: ""
+            val conn = open(context, "suggest?q=${enc(text)}$around")
             val body = conn.inputStream.bufferedReader().use(BufferedReader::readText)
             // La clé est « suggestions ». Côté iPhone, l'avoir lue « results »
             // faisait échouer le décodage à chaque frappe, en silence.

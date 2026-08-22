@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 extension ISO8601DateFormatter {
@@ -36,9 +37,18 @@ enum API {
         var id: String { banID ?? "\(lon),\(lat)" }
     }
 
-    static func suggest(_ text: String) async throws -> [Suggestion] {
-        let (data, _) = try await URLSession.shared.data(
-            for: request("suggest", query: [.init(name: "q", value: text)]))
+    /// Suggestions d'adresses, CLASSÉES PAR PROXIMITÉ quand la position est
+    /// connue. L'usage mobile est local : on est devant le bâtiment, ou on
+    /// prépare une visite dans le quartier. Sans ce repère, chercher « ecole »
+    /// proposait des écoles de toute la France.
+    static func suggest(_ text: String,
+                        near: CLLocationCoordinate2D? = nil) async throws -> [Suggestion] {
+        var query = [URLQueryItem(name: "q", value: text)]
+        if let near, CLLocationCoordinate2DIsValid(near) {
+            query.append(.init(name: "lat", value: String(near.latitude)))
+            query.append(.init(name: "lon", value: String(near.longitude)))
+        }
+        let (data, _) = try await URLSession.shared.data(for: request("suggest", query: query))
         // La clé est « suggestions » : elle était lue comme « results », donc le
         // décodage échouait TOUJOURS — et un try? avalait l'erreur, ce qui
         // donnait une liste vide sans le moindre signe de panne.
