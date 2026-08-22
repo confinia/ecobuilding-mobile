@@ -80,6 +80,9 @@ final class BuildingModel: ObservableObject {
 
 struct BuildingSheet: View {
     let target: ContentView.Target
+    /// Remonte l'identifiant dès que le flux l'a livré, pour que la carte
+    /// puisse mettre le bâtiment en évidence.
+    var onBuildingResolved: (String) -> Void = { _ in }
     @StateObject private var model = BuildingModel()
 
     var body: some View {

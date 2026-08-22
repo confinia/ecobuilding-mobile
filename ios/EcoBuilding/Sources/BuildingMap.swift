@@ -22,6 +22,11 @@ struct BuildingMap: UIViewRepresentable {
     /// immobile : on cherchait une adresse à l'autre bout de la France et on
     /// continuait de regarder son propre quartier.
     var focus: CLLocationCoordinate2D?
+    /// Bâtiment à mettre en évidence, y compris lorsqu'il vient d'une RECHERCHE
+    /// et non d'un appui. Sans cela, la fiche s'ouvrait sans qu'on sache lequel
+    /// des bâtiments visibles elle décrivait — d'autant qu'un « bâtiment
+    /// groupe » BDNB couvre parfois plusieurs adresses.
+    var highlighted: String?
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /// Vue d'ouverture, avant la plongée : assez large pour situer le quartier.
@@ -71,6 +76,12 @@ struct BuildingMap: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: MLNMapView, context: Context) {
+        // Surlignage piloté depuis l'extérieur (résultat de recherche).
+        if context.coordinator.lastHighlighted != highlighted {
+            context.coordinator.lastHighlighted = highlighted
+            context.coordinator.selectedLayer?.predicate =
+                NSPredicate(format: "batiment_groupe_id == %@", highlighted ?? "")
+        }
         guard let focus, CLLocationCoordinate2DIsValid(focus) else { return }
         // Ne rejouer l'animation que si la cible a changé.
         let last = context.coordinator.lastFocus
@@ -98,6 +109,7 @@ struct BuildingMap: UIViewRepresentable {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         var lastFocus: CLLocationCoordinate2D?
+        var lastHighlighted: String?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
         let onHighlight: (String?) -> Void
         /// Bâtiment désigné par le premier appui, en attente de confirmation.
@@ -224,6 +236,11 @@ struct BuildingMap: UIViewRepresentable {
             highlight.fillExtrusionOpacity = NSExpression(forConstantValue: 1.0)
             style.addLayer(highlight)
             selectedLayer = highlight
+            // Le style se charge parfois APRÈS la recherche : sans ce rappel,
+            // le premier bâtiment cherché n'était jamais surligné.
+            if let id = lastHighlighted {
+                highlight.predicate = NSPredicate(format: "batiment_groupe_id == %@", id)
+            }
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {

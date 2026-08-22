@@ -21,6 +21,8 @@ struct ContentView: View {
     @State private var copied = false
     /// Bâtiment désigné, en attente du second appui.
     @State private var armed: String?
+    /// Bâtiment mis en évidence sur la carte (touché OU trouvé par recherche).
+    @State private var highlighted: String?
     /// Point que la carte doit rejoindre (adresse trouvée).
     @State private var focus: CLLocationCoordinate2D?
 
@@ -56,8 +58,9 @@ struct ContentView: View {
         ZStack(alignment: .top) {
             BuildingMap(onSelect: { id, coord in
                 armed = nil
+                highlighted = id
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }, onHighlight: { id in armed = id }, focus: focus)
+            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted)
             .ignoresSafeArea()
 
             SearchField(text: $search, onPick: { s in
@@ -118,7 +121,13 @@ struct ContentView: View {
             }
         }
         .sheet(item: $selection) { target in
-            BuildingSheet(target: target)
+            BuildingSheet(target: target, onBuildingResolved: { id in
+                highlighted = id
+                // Le bâtiment est identifié et titré dans la fiche : garder
+                // l'adresse dans le champ ne sert plus qu'à encombrer, et
+                // oblige à l'effacer soi-même avant la recherche suivante.
+                search = ""
+            })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
