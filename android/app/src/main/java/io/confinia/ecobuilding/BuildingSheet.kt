@@ -214,7 +214,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
 fun quotaLine(q: Quota?, building: String?): String? {
     if (q == null) return null
     if (building != null && building in q.freeAgain)
-        return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
+        return "Fiche déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
     val total = q.reportsIncluded ?: return null
     val whenTxt = when (q.period) { "month" -> "ce mois-ci"; "day" -> "aujourd'hui"; else -> "" }
     // CONSOMMATION, et non solde restant : « 10 bâtiments restants sur 10 » se
@@ -311,7 +311,7 @@ private fun RisksSection(risks: JsonElement?) {
     Section("Risques (Géorisques)") {
         if (natural.isNotEmpty()) Row("Naturels", natural.joinToString(", ", transform = ::humanize))
         if (techno.isNotEmpty()) Row("Technologiques", techno.joinToString(", ", transform = ::humanize))
-        Row("Argiles", risks.str("clay_shrink_swell"))
+        Row("Aléa retrait-gonflement", risks.str("clay_shrink_swell"))
     }
 }
 
@@ -341,7 +341,7 @@ private fun EnvironmentSection(groundwater: JsonElement?, solar: JsonElement?, w
     if (depth == null && yield_ == null && efficiency == null) return
     Section("Environnement") {
         Row("Nappe phréatique", depth?.let { fmt("%.1f m", it) })
-        Row("Productible solaire", yield_?.let { "${it.toInt()} kWh/an par kWc" })
+        Row("Potentiel solaire", yield_?.let { "${it.toInt()} kWh/an par kWc" })
         Row("Rendement du réseau d'eau", efficiency?.let { fmt("%.1f %%", it) })
         Row("Prix de l'eau", water.num("price_eur_m3")?.let { fmt("%.2f €/m³", it) })
     }
@@ -355,7 +355,7 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
     if (medians.isEmpty() && nbSchools == 0 && tax == null) return
     Section("Quartier") {
         medians.keys.sorted().forEach { k ->
-            Row("Médiane ${k.lowercase()}",
+            Row("Prix médian (${k.lowercase()})",
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { "$it €/m²" })
         }
         Row("Taxe foncière (bâti)", tax?.let { fmt("%.2f %%", it) })

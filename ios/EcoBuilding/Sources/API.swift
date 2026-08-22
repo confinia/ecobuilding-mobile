@@ -164,7 +164,13 @@ enum API {
         let req = request("report/\(buildingID).pdf", query: query)
         let (tmp, response) = try await URLSession.shared.download(for: req)
         if let http = response as? HTTPURLResponse, http.statusCode == 429 {
-            throw QuotaExhausted(message: "Quota atteint")
+            // Le message vient du SERVEUR : lui seul sait ce qui a été consommé
+            // et quand la limite rouvre. « Quota atteint » ne disait rien à
+            // personne — ni ce qu'on avait utilisé, ni quand cela repartait.
+            let detail = (try? Data(contentsOf: tmp))
+                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                .flatMap { $0?["detail"] as? String }
+            throw QuotaExhausted(message: detail ?? "Vous avez atteint la limite de fiches.")
         }
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent("ecobuilding-\(buildingID).pdf")
@@ -210,7 +216,7 @@ enum API {
         /// rouvrir un document qu'il a pourtant déjà payé.
         func summary(for building: String?) -> String? {
             if let b = building, free_again?.contains(b) == true {
-                return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
+                return "Fiche déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
             }
             guard let total = reports_included else { return nil }   // sans limite
             // Sans indication du serveur, on n'invente pas : un vieux serveur
