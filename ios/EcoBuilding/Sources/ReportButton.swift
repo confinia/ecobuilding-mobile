@@ -53,7 +53,10 @@ struct ReportButton: View {
                 // limite en la heurtant. Aucun prix affiché tant que le mur
                 // payant n'existe pas — annoncer un tarif qu'on ne peut pas
                 // encaisser serait un mensonge.
-                Text(left).font(.footnote).foregroundStyle(.secondary)
+                Text(left)
+                    .font(.footnote)
+                    .foregroundStyle(quota?.blocked == true ? .orange : .secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .sheet(item: $pdf) { url in PDFPreview(url: url) }

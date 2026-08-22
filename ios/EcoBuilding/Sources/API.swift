@@ -187,12 +187,26 @@ enum API {
             }
             guard let left = reports_left else { return nil }   // sans limite
             let when = period == "month" ? "ce mois-ci" : "aujourd'hui"
-            var text = left > 1 ? "\(left) bâtiments restants \(when)"
-                                : left == 1 ? "1 bâtiment restant \(when)"
-                                : "Limite atteinte \(when)"
+            var text: String
+            if left == 0 {
+                // Un mur doit DIRE ce qui a été consommé et quand il rouvre.
+                // « Limite atteinte » seul laisse croire à un blocage définitif
+                // et n'indique pas si l'on s'est trompé de compte.
+                let total = reports_included.map(String.init) ?? "?"
+                text = "Limite atteinte : \(reports_used) bâtiments sur \(total) "
+                     + when + (period == "month" ? " — elle repart le 1er du mois"
+                                                 : " — elle repart demain")
+            } else {
+                let total = reports_included.map { " sur \($0)" } ?? ""
+                text = left > 1 ? "\(left) bâtiments restants \(when)\(total)"
+                                : "1 bâtiment restant \(when)\(total)"
+            }
             if let u = units, u > 0 { text += " · \(u) à l'unité" }
             return text
         }
+
+        /// Le mur est-il atteint ? Sert à le montrer en orange plutôt qu'en gris.
+        var blocked: Bool { reports_left == 0 }
     }
 
     static func quota() async throws -> Quota {
