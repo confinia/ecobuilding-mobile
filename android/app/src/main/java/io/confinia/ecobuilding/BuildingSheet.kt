@@ -126,7 +126,8 @@ private fun dpeColor(cls: String?) = when (cls) {
 
 @Composable
 fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
-                  onQuotaChanged: (Quota?) -> Unit) {
+                  onQuotaChanged: (Quota?) -> Unit,
+                  onReport: (java.io.File) -> Unit) {
     // Hauteur BORNÉE, sinon le poids ne veut rien dire : la feuille mesurait son
     // contenu sans contrainte, la zone défilante prenait toute la place et le
     // bouton PDF tombait hors de l'écran — le défaut déjà corrigé sur iPhone,
@@ -199,7 +200,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
         // fait défiler toute la fiche, alors que c'est l'objet vendu.
         if (model.building != null) {
             Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
-                ReportButton(model, quota, onQuotaChanged)
+                ReportButton(model, quota, onQuotaChanged, onReport)
             }
         }
     }

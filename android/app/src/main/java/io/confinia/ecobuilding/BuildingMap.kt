@@ -161,10 +161,11 @@ fun BuildingMap(
             // couches RENDUES. Une couche invisible ne répond plus à
             // queryRenderedFeatures, et toucher un bâtiment en vue photo ne
             // sélectionnait plus rien — le geste même qu'on vient chercher ici.
-            val opacity = if (aerial) 0f else 0.9f
+            state.aerial = aerial
+            val opacity = if (aerial) 0.01f else 0.9f
             map.style?.getLayer(MapIds.LAYER)?.setProperties(fillExtrusionOpacity(opacity))
             map.style?.getLayer(MapIds.SELECTED)
-                ?.setProperties(fillExtrusionOpacity(if (aerial) 0f else 1f))
+                ?.setProperties(fillExtrusionOpacity(if (aerial) 0.01f else 1f))
 
             // La permission peut être accordée APRÈS le premier affichage :
             // on réessaie tant que le point bleu n'est pas posé.
@@ -195,6 +196,7 @@ private class MapState {
     var lastFocus: LatLng? = null
     var lastPin: LatLng? = null
     var userDotOn = false
+    var aerial = false
     /** Bâtiment désigné par le premier appui, en attente de confirmation. */
     private var armed: String? = null
 
@@ -286,32 +288,95 @@ private class MapState {
         }
     }
 
+    /**
+     * Trouve le bâtiment VISÉ, et non celui dont l'emprise est sous le doigt.
+     *
+     * Deux régimes, parce que l'écran ne montre pas la même chose :
+     *
+     * - **vue photo**, volumes effacés : ce qu'on voit EST l'emprise au sol,
+     *   posée à plat sur l'orthophoto. La recherche directe est exacte ;
+     * - **vue plan inclinée** : le toit est dessiné plus haut que son emprise.
+     *   Le point touché tombe alors sur l'emprise du bâtiment de DERRIÈRE — et
+     *   c'est bien ce voisin que MapLibre renvoyait. On remonte donc chaque
+     *   emprise candidate de sa hauteur pour reconstituer son toit à l'écran,
+     *   et on retient celui qui contient réellement le point.
+     *
+     * L'erreur passée : consulter la recherche par bande **seulement** quand la
+     * recherche directe ne renvoyait rien. Elle renvoie presque toujours
+     * quelque chose : le mauvais bâtiment.
+     */
     private fun pick(map: MapLibreMap, screen: PointF): String? {
-        map.queryRenderedFeatures(screen, MapIds.LAYER).firstOrNull()
-            ?.getStringProperty("batiment_groupe_id")?.let { return it }
-        if (map.cameraPosition.tilt < 5) return null
+        val tilt = map.cameraPosition.tilt
+        val direct = map.queryRenderedFeatures(screen, MapIds.LAYER).firstOrNull()
+            ?.getStringProperty("batiment_groupe_id")
+        if (aerial || tilt < 5) return direct
 
-        // Bande vers le bas : là se trouvent les emprises des bâtiments dont on
-        // voit le toit plus haut.
-        val strip = RectF(screen.x - 30f, screen.y, screen.x + 30f, screen.y + 200f)
+        // Bande large et surtout HAUTE vers le bas : c'est là que se trouvent
+        // les emprises des bâtiments dont on voit le toit plus haut.
+        val strip = RectF(screen.x - 60f, screen.y - 30f, screen.x + 60f, screen.y + 300f)
         val candidates = map.queryRenderedFeatures(strip, MapIds.LAYER)
-        if (candidates.isEmpty()) return null
-        val mpp = map.projection.getMetersPerPixelAtLatitude(map.cameraPosition.target!!.latitude)
-        val lift = sin(Math.toRadians(map.cameraPosition.tilt)) / mpp.coerceAtLeast(1e-4)
-        return candidates.minByOrNull { f ->
-            val h = if (f.hasProperty("hauteur_mean")) f.getNumberProperty("hauteur_mean").toDouble() else 6.0
-            val g = f.geometry()?.let { map.projection.toScreenLocation(centroid(it)) } ?: screen
-            hypot((g.x - screen.x).toDouble(), (g.y - h * lift - screen.y).toDouble())
-        }?.getStringProperty("batiment_groupe_id")
+        if (candidates.isEmpty()) return direct
+
+        val latitude = map.cameraPosition.target?.latitude ?: return direct
+        val mpp = map.projection.getMetersPerPixelAtLatitude(latitude)
+        val lift = sin(Math.toRadians(tilt)) / mpp.coerceAtLeast(1e-4)
+
+        var best: String? = null
+        var bestHeight = -1.0
+        var fallback: String? = null
+        var fallbackDistance = Double.MAX_VALUE
+
+        for (feature in candidates) {
+            val id = feature.getStringProperty("batiment_groupe_id") ?: continue
+            val height = if (feature.hasProperty("hauteur_mean"))
+                feature.getNumberProperty("hauteur_mean").toDouble() else 6.0
+            val roof = roofPolygon(map, feature, height * lift)
+            if (roof.isNotEmpty() && contains(roof, screen)) {
+                // Plusieurs toits peuvent se recouvrir : le plus haut est celui
+                // qui est dessiné devant, donc celui qu'on voit.
+                if (height > bestHeight) { bestHeight = height; best = id }
+            } else if (best == null) {
+                val centre = roof.takeIf { it.isNotEmpty() }?.let { ring ->
+                    PointF(ring.sumOf { it.x.toDouble() }.toFloat() / ring.size,
+                           ring.sumOf { it.y.toDouble() }.toFloat() / ring.size)
+                } ?: continue
+                val d = hypot((centre.x - screen.x).toDouble(), (centre.y - screen.y).toDouble())
+                if (d < fallbackDistance) { fallbackDistance = d; fallback = id }
+            }
+        }
+        return best ?: fallback ?: direct
     }
 
-    private fun centroid(geom: org.maplibre.geojson.Geometry): LatLng {
-        val poly = geom as? org.maplibre.geojson.Polygon
-            ?: (geom as? org.maplibre.geojson.MultiPolygon)?.polygons()?.firstOrNull()
-        val ring = poly?.coordinates()?.firstOrNull() ?: return LatLng(0.0, 0.0)
-        return LatLng(ring.sumOf { it.latitude() } / ring.size,
-                      ring.sumOf { it.longitude() } / ring.size)
+    /** L'emprise projetée à l'écran, remontée de la hauteur du bâtiment. */
+    private fun roofPolygon(map: MapLibreMap, feature: org.maplibre.geojson.Feature,
+                            lift: Double): List<PointF> {
+        val geometry = feature.geometry()
+        val polygon = geometry as? org.maplibre.geojson.Polygon
+            ?: (geometry as? org.maplibre.geojson.MultiPolygon)?.polygons()?.firstOrNull()
+        val ring = polygon?.coordinates()?.firstOrNull() ?: return emptyList()
+        return ring.map { point ->
+            val ground = map.projection.toScreenLocation(
+                LatLng(point.latitude(), point.longitude()))
+            PointF(ground.x, ground.y - lift.toFloat())
+        }
     }
+
+    /** Lancer de rayon : le point est-il à l'intérieur du polygone ? */
+    private fun contains(ring: List<PointF>, point: PointF): Boolean {
+        var inside = false
+        var j = ring.size - 1
+        for (i in ring.indices) {
+            val a = ring[i]
+            val b = ring[j]
+            if ((a.y > point.y) != (b.y > point.y) &&
+                point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) {
+                inside = !inside
+            }
+            j = i
+        }
+        return inside
+    }
+
 }
 
 private fun installLayers(context: android.content.Context, style: Style) {

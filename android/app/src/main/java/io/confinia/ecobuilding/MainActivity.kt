@@ -54,6 +54,7 @@ private fun Screen() {
     var pin by remember { mutableStateOf<LatLng?>(null) }
     var aerial by remember { mutableStateOf(false) }
     var quota by remember { mutableStateOf<Quota?>(null) }
+    var report by remember { mutableStateOf<java.io.File?>(null) }
     var located by remember { mutableStateOf(UserLocation.granted(context)) }
     val model = remember(target) { BuildingModel() }
 
@@ -183,6 +184,13 @@ private fun Screen() {
         suggestions = runCatching { Api.suggest(context, search) }.getOrDefault(emptyList())
     }
 
+    // La fiche PDF recouvre TOUT, comme sur iPhone : on ne quitte plus l'app
+    // pour lire ce qu'on vient d'obtenir.
+    report?.let { file ->
+        PdfViewer(file, onClose = { report = null })
+        androidx.activity.compose.BackHandler { report = null }
+    }
+
     if (target != null) {
         // Ouverture pleine hauteur : à mi-hauteur, Android place le contenu sous
         // le pli et le bouton PDF n'est atteignable qu'après avoir tiré la
@@ -190,7 +198,7 @@ private fun Screen() {
         ModalBottomSheet(onDismissRequest = { target = null },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             BuildingSheet(model, quota, onClose = { target = null },
-                onQuotaChanged = { quota = it })
+                onQuotaChanged = { quota = it }, onReport = { report = it })
         }
     }
 }

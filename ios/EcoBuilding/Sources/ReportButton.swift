@@ -59,7 +59,11 @@ struct ReportButton: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .sheet(item: $pdf) { url in PDFPreview(url: url) }
+        // PLEIN ÉCRAN, et non une feuille : la bande de carte laissée visible
+        // en haut donnait à croire qu'on pouvait y revenir en la touchant, ce
+        // qu'une feuille système ne permet pas. Ou l'on voit la carte et on
+        // peut la toucher, ou on ne la voit pas.
+        .fullScreenCover(item: $pdf) { url in PDFPreview(url: url) }
         .task { quota = try? await API.quota() }
     }
 
@@ -100,33 +104,60 @@ struct ReportButton: View {
 /// trois étapes et une sortie de l'app pour voir ce qu'on vient de payer. Ici la
 /// fiche s'ouvre directement, et le bouton de partage du lecteur permet ensuite
 /// de l'envoyer à un client ou de l'enregistrer.
-private struct PDFPreview: UIViewControllerRepresentable {
+private struct PDFPreview: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // En-tête À NOUS. La croix posée sur le QLPreviewController n'était
+            // jamais rendue : celui-ci gère sa propre barre et masque celle
+            // qu'on lui fournit. L'utilisateur restait coincé sur le document
+            // qu'il venait d'obtenir, juste après l'action la plus importante
+            // de l'app — seul le glissement vers le bas s'en sortait, et rien
+            // ne l'annonçait.
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Fermer la fiche")
+                Spacer()
+                ShareLink(item: url) {
+                    Image(systemName: "square.and.arrow.up").font(.title3)
+                }
+                .accessibilityLabel("Partager la fiche")
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(.regularMaterial)
+
+            QuickLook(url: url)
+        }
+    }
+}
+
+/// Lecteur natif d'iOS : la fiche s'AFFICHE tout de suite.
+///
+/// La feuille de partage seule obligeait à enregistrer dans Fichiers puis à
+/// rouvrir depuis le gestionnaire de fichiers, qui la confiait à un navigateur —
+/// trois étapes et une sortie de l'app pour voir ce qu'on vient de payer.
+private struct QuickLook: UIViewControllerRepresentable {
     let url: URL
 
-    func makeUIViewController(context: Context) -> UINavigationController {
+    func makeUIViewController(context: Context) -> QLPreviewController {
         let preview = QLPreviewController()
         preview.dataSource = context.coordinator
-        // Une CROIX, pas le mot « Fermer » : un symbole se reconnaît sans
-        // lecture, tient dans un coin, et ne pousse pas le titre du document
-        // hors de l'écran.
-        preview.navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(systemName: "xmark.circle.fill"), style: .plain,
-            target: context.coordinator, action: #selector(Coordinator.close))
-        preview.navigationItem.leftBarButtonItem?.accessibilityLabel = "Fermer"
-        preview.navigationItem.leftBarButtonItem?.tintColor = .secondaryLabel
-        let nav = UINavigationController(rootViewController: preview)
-        context.coordinator.nav = nav
-        return nav
+        return preview
     }
-    func updateUIViewController(_ vc: UINavigationController, context: Context) {}
+    func updateUIViewController(_ vc: QLPreviewController, context: Context) {}
     func makeCoordinator() -> Coordinator { Coordinator(url: url) }
 
     final class Coordinator: NSObject, QLPreviewControllerDataSource {
         let url: URL
-        weak var nav: UINavigationController?
         init(url: URL) { self.url = url }
-
-        @objc func close() { nav?.dismiss(animated: true) }
         func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
         func previewController(_ controller: QLPreviewController,
                                previewItemAt index: Int) -> QLPreviewItem {
