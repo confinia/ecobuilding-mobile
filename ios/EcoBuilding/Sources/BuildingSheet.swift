@@ -217,8 +217,12 @@ private struct BuildingSection: View {
             Row(label: "Hauteur", value: building["height_m"]?.doubleValue.map { "\(Int($0)) m" })
             // « Niveaux » et non « Étages » : en français, « 1 étage » se
             // comprend comme rez-de-chaussée + 1, alors que la BDNB compte des
-            // niveaux — le rez-de-chaussée inclus.
-            Row(label: "Niveaux", value: building["floors"]?.intValue.map(String.init))
+            // niveaux — le rez-de-chaussée inclus. Et à un seul niveau, on dit
+            // « de plain-pied » : c'est le mot qu'emploie un acheteur, et un
+            // critère décisif pour qui vieillit ou vit avec un handicap.
+            Row(label: "Niveaux", value: building["floors"]?.intValue.map {
+                $0 == 1 ? "1 — de plain-pied" : String($0)
+            })
             Row(label: "Logements", value: building["dwellings"]?.intValue.map(String.init))
             Row(label: "Murs", value: building["wall_material"]?.stringValue?.capitalized)
             Row(label: "Toiture", value: building["roof_material"]?.stringValue?.capitalized)
