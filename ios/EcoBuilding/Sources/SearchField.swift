@@ -48,7 +48,13 @@ struct SearchField: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(suggestions) { s in
                         Button {
-                            text = s.label
+                            // Vider le champ, et non y recopier l'adresse : la
+                            // recopie relançait une recherche par l'anti-rebond,
+                            // qui réaffichait aussitôt la liste qu'on venait de
+                            // fermer. L'adresse choisie titre la fiche, elle n'a
+                            // pas à rester ici.
+                            task?.cancel()
+                            text = ""
                             suggestions = []
                             focused = false
                             onPick(s)
@@ -68,9 +74,12 @@ struct SearchField: View {
     }
 
     private func submit() {
+        task?.cancel()
+        let query = text
+        text = ""
         suggestions = []
         focused = false
-        onSubmit(text)
+        onSubmit(query)
     }
 
     /// Anti-rebond : une frappe ne doit pas déclencher une requête par lettre.

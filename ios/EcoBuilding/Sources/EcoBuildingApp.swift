@@ -65,6 +65,27 @@ struct ContentView: View {
             }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted, aerial: aerial)
             .ignoresSafeArea()
 
+            // Bascule plan / photo aérienne. Placée en haut à droite, sous la
+            // recherche : c'est le premier geste d'un acheteur qui veut « voir
+            // le bien » plutôt que des volumes (#258).
+            if search.isEmpty {
+              VStack {
+                HStack {
+                    Spacer()
+                    Button { aerial.toggle() } label: {
+                        Image(systemName: aerial ? "map.fill" : "globe.europe.africa.fill")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .padding(.trailing, 12)
+                    .accessibilityLabel(aerial ? "Afficher le plan" : "Afficher la photo aérienne")
+                }
+                .padding(.top, 72)
+                Spacer()
+              }
+            }
+
             SearchField(text: $search, onPick: { s in
                 focus = CLLocationCoordinate2D(latitude: s.lat, longitude: s.lon)
                 if let ban = s.banID {
@@ -80,25 +101,6 @@ struct ContentView: View {
             })
             .padding(.horizontal, 12)
             .padding(.top, 8)          // ne pas coller à la barre d'état
-
-            // Bascule plan / photo aérienne. Placée en haut à droite, sous la
-            // recherche : c'est le premier geste d'un acheteur qui veut « voir
-            // le bien » plutôt que des volumes (#258).
-            VStack {
-                HStack {
-                    Spacer()
-                    Button { aerial.toggle() } label: {
-                        Image(systemName: aerial ? "map.fill" : "globe.europe.africa.fill")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                            .background(.regularMaterial, in: Circle())
-                    }
-                    .padding(.trailing, 12)
-                    .accessibilityLabel(aerial ? "Afficher le plan" : "Afficher la photo aérienne")
-                }
-                .padding(.top, 72)
-                Spacer()
-            }
 
             // Sans ce mot, le premier appui paraît sans effet et l'utilisateur
             // conclut que la carte ne répond pas.
@@ -144,10 +146,6 @@ struct ContentView: View {
         .sheet(item: $selection) { target in
             BuildingSheet(target: target, onBuildingResolved: { id in
                 highlighted = id
-                // Le bâtiment est identifié et titré dans la fiche : garder
-                // l'adresse dans le champ ne sert plus qu'à encombrer, et
-                // oblige à l'effacer soi-même avant la recherche suivante.
-                search = ""
             })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
