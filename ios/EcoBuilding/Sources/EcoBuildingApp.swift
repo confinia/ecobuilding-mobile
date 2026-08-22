@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var selection: Target?
     @State private var search = ""
     @State private var copied = false
+    /// Bâtiment désigné, en attente du second appui.
+    @State private var armed: String?
     /// Point que la carte doit rejoindre (adresse trouvée).
     @State private var focus: CLLocationCoordinate2D?
 
@@ -53,8 +55,9 @@ struct ContentView: View {
     var body: some View {
         ZStack(alignment: .top) {
             BuildingMap(onSelect: { id, coord in
+                armed = nil
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }, focus: focus)
+            }, onHighlight: { id in armed = id }, focus: focus)
             .ignoresSafeArea()
 
             SearchField(text: $search, onPick: { s in
@@ -72,6 +75,22 @@ struct ContentView: View {
             })
             .padding(.horizontal, 12)
             .padding(.top, 8)          // ne pas coller à la barre d'état
+
+            // Sans ce mot, le premier appui paraît sans effet et l'utilisateur
+            // conclut que la carte ne répond pas.
+            if armed != nil {
+                VStack {
+                    Spacer()
+                    Text("Touchez à nouveau ce bâtiment pour voir sa fiche")
+                        .font(.callout.weight(.medium))
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .background(.regularMaterial, in: Capsule())
+                        .shadow(radius: 4, y: 2)
+                        .padding(.bottom, 40)
+                }
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
 
             // Version affichée en clair : un testeur qui dit « ça plante » sans
             // savoir sur quelle version tourne son téléphone fait perdre un

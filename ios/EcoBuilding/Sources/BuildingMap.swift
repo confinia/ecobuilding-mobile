@@ -12,9 +12,12 @@ import SwiftUI
 ///
 /// BDNB ne publie que le **z14** : demander un autre niveau ne ramène rien.
 struct BuildingMap: UIViewRepresentable {
-    /// Bâtiment touché : identifiant BDNB + point touché (l'arbitrage d'adresse
-    /// dépend du point, un « bâtiment groupe » pouvant couvrir plusieurs rues).
+    /// Bâtiment CONFIRMÉ (second appui) : identifiant BDNB + point touché
+    /// (l'arbitrage d'adresse dépend du point, un « bâtiment groupe » pouvant
+    /// couvrir plusieurs rues).
     var onSelect: (String, CLLocationCoordinate2D) -> Void
+    /// Bâtiment simplement DÉSIGNÉ (premier appui), pour l'annoncer à l'écran.
+    var onHighlight: (String?) -> Void = { _ in }
     /// Point à rejoindre quand une adresse est trouvée. La carte restait
     /// immobile : on cherchait une adresse à l'autre bout de la France et on
     /// continuait de regarder son propre quartier.
@@ -86,20 +89,25 @@ struct BuildingMap: UIViewRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect) }
+    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect, onHighlight: onHighlight) }
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         var lastFocus: CLLocationCoordinate2D?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
+        let onHighlight: (String?) -> Void
+        /// Bâtiment désigné par le premier appui, en attente de confirmation.
+        private var armed: String?
         /// Sert uniquement à lire la position DÉJÀ connue du système au
         /// démarrage, pour ouvrir la carte au bon endroit sans animation.
         let locations = CLLocationManager()
         private var didCenter = false
 
-        init(onSelect: @escaping (String, CLLocationCoordinate2D) -> Void) {
+        init(onSelect: @escaping (String, CLLocationCoordinate2D) -> Void,
+             onHighlight: @escaping (String?) -> Void) {
             self.onSelect = onSelect
+            self.onHighlight = onHighlight
             super.init()
             locations.requestWhenInUseAuthorization()
         }
@@ -176,8 +184,21 @@ struct BuildingMap: UIViewRepresentable {
             // nulle et l'app meurt sur une exception au chargement du style.
             // Une comparaison à un identifiant impossible fait le même travail.
             highlight.predicate = NSPredicate(format: "batiment_groupe_id == %@", "")
+            // Assombrir la PROPRE couleur du bâtiment plutôt que de tout peindre
+            // en vert : le vert uniforme effaçait la classe DPE, c'est-à-dire
+            // l'information qu'on est venu chercher (#254).
             highlight.fillExtrusionColor = NSExpression(
-                forConstantValue: UIColor(red: 0.17, green: 0.48, blue: 0.29, alpha: 1))
+                forMLNMatchingKey: NSExpression(forKeyPath: "classe_bilan_dpe"),
+                in: [
+                    NSExpression(forConstantValue: "A"): NSExpression(forConstantValue: UIColor(red: 0.00, green: 0.31, blue: 0.12, alpha: 1)),
+                    NSExpression(forConstantValue: "B"): NSExpression(forConstantValue: UIColor(red: 0.16, green: 0.40, blue: 0.17, alpha: 1)),
+                    NSExpression(forConstantValue: "C"): NSExpression(forConstantValue: UIColor(red: 0.36, green: 0.50, blue: 0.20, alpha: 1)),
+                    NSExpression(forConstantValue: "D"): NSExpression(forConstantValue: UIColor(red: 0.60, green: 0.56, blue: 0.03, alpha: 1)),
+                    NSExpression(forConstantValue: "E"): NSExpression(forConstantValue: UIColor(red: 0.58, green: 0.43, blue: 0.03, alpha: 1)),
+                    NSExpression(forConstantValue: "F"): NSExpression(forConstantValue: UIColor(red: 0.56, green: 0.30, blue: 0.10, alpha: 1)),
+                    NSExpression(forConstantValue: "G"): NSExpression(forConstantValue: UIColor(red: 0.49, green: 0.06, blue: 0.06, alpha: 1)),
+                ],
+                default: NSExpression(forConstantValue: UIColor(red: 0.42, green: 0.39, blue: 0.35, alpha: 1)))
             highlight.fillExtrusionHeight = NSExpression(
                 format: "mgl_coalesce({%@, %@})",
                 NSExpression(forKeyPath: "hauteur_mean"),
@@ -194,9 +215,29 @@ struct BuildingMap: UIViewRepresentable {
                 at: point, styleLayerIdentifiers: [BuildingMap.layerID])
             guard let feature = features.first,
                   let id = feature.attribute(forKey: "batiment_groupe_id") as? String
-            else { return }
+            else {
+                // Appui à côté : on désarme, plutôt que de garder une sélection
+                // fantôme que le prochain appui confirmerait par surprise.
+                armed = nil
+                selectedLayer?.predicate = NSPredicate(format: "batiment_groupe_id == %@", "")
+                onHighlight(nil)
+                return
+            }
             selectedLayer?.predicate = NSPredicate(format: "batiment_groupe_id == %@", id)
-            onSelect(id, map.convert(point, toCoordinateFrom: map))
+
+            // DEUX temps : le premier appui désigne, le second charge. Avec de
+            // l'inclinaison, la visée tombe souvent sur le voisin — un appui
+            // manqué ne doit pas coûter un chargement complet, ni ouvrir la
+            // fiche d'un bâtiment qu'on ne visait pas.
+            if armed == id {
+                armed = nil
+                onHighlight(nil)
+                onSelect(id, map.convert(point, toCoordinateFrom: map))
+            } else {
+                armed = id
+                onHighlight(id)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
         }
     }
 }
