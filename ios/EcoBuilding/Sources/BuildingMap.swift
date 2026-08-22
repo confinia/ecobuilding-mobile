@@ -87,17 +87,9 @@ struct BuildingMap: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: MLNMapView, context: Context) {
+        // La photo est opaque et posée au-dessus du plan : la rendre visible
+        // suffit, rien à masquer. Nos volumes, ajoutés après, restent dessus.
         context.coordinator.aerialLayer?.isVisible = aerial
-        // Sur la photo, les libellés du plan deviennent illisibles et le fond
-        // n'a plus lieu d'être : on masque tout sauf nos volumes.
-        if let style = uiView.style {
-            for layer in style.layers
-            where layer.identifier != BuildingMap.aerialLayerID
-                && layer.identifier != BuildingMap.layerID
-                && layer.identifier != BuildingMap.selectedLayerID {
-                layer.isVisible = !aerial
-            }
-        }
         // Surlignage piloté depuis l'extérieur (résultat de recherche).
         if context.coordinator.lastHighlighted != highlighted {
             context.coordinator.lastHighlighted = highlighted
@@ -200,11 +192,7 @@ struct BuildingMap: UIViewRepresentable {
             let orthoLayer = MLNRasterStyleLayer(identifier: BuildingMap.aerialLayerID,
                                                  source: ortho)
             orthoLayer.isVisible = false
-            if let first = style.layers.first {
-                style.insertLayer(orthoLayer, below: first)
-            } else {
-                style.addLayer(orthoLayer)
-            }
+            style.addLayer(orthoLayer)      // au-dessus du plan, sous nos volumes
             aerialLayer = orthoLayer
 
             let source = MLNVectorTileSource(
