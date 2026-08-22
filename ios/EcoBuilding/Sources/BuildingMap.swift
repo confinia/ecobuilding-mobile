@@ -24,6 +24,13 @@ struct BuildingMap: UIViewRepresentable {
     var focus: CLLocationCoordinate2D?
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
+    /// Vue d'ouverture, avant la plongée : assez large pour situer le quartier.
+    static let openZoom: Double = 10
+    /// Vue de travail : les bâtiments sont assez gros pour être touchés au doigt.
+    static let workZoom: Double = 17
+    /// Inclinaison par défaut. Le relief EST le produit : à plat, rien ne
+    /// distingue une passoire de quatre étages d'une maison de plain-pied.
+    static let defaultPitch: CGFloat = 30
     private static let sourceID = "bdnb"
     private static let layerID = "bdnb-dpe-3d"
     fileprivate static let selectedLayerID = "bdnb-selected"
@@ -44,21 +51,17 @@ struct BuildingMap: UIViewRepresentable {
         // et trompeur — on croit un instant regarder son quartier.
         // Zoom 18 : à 16 les bâtiments sont trop petits pour être touchés.
         if let fix = context.coordinator.locations.location {
-            // Position déjà connue du système : on y est d'emblée, sans animation.
-            map.setCenter(fix.coordinate, zoomLevel: 18, animated: false)
+            // On ouvre de loin, puis on plonge : le vol d'arrivée montre d'un
+            // coup le quartier ET le relief. Arriver directement au ras des
+            // toits ne donne aucun repère.
+            map.setCenter(fix.coordinate, zoomLevel: BuildingMap.openZoom, animated: false)
+            context.coordinator.diveTo(fix.coordinate, on: map)
         } else {
             // Pas encore de position : vue d'ensemble de la France, et le premier
-            // point reçu déclenchera un ZOOM (voir didUpdate userLocation) —
-            // jamais un déplacement latéral d'une ville à une autre.
+            // point reçu déclenchera le même vol — jamais un déplacement latéral
+            // d'une ville à une autre.
             map.setCenter(.init(latitude: 46.6, longitude: 2.5), zoomLevel: 4.5, animated: false)
         }
-        map.userTrackingMode = .follow
-        // Inclinaison : le relief EST le produit. À plat, on ne distingue pas
-        // une passoire de quatre étages d'une maison de plain-pied. On modifie
-        // la caméra COURANTE pour ne pas écraser le zoom fixé ci-dessus.
-        let camera = map.camera
-        camera.pitch = 45
-        map.setCamera(camera, animated: false)
         map.delegate = context.coordinator
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
@@ -84,7 +87,7 @@ struct BuildingMap: UIViewRepresentable {
                                   pitch: 0, heading: 0)
         uiView.fly(to: camera, withDuration: 1.6) {
             let close = MLNMapCamera(lookingAtCenter: focus, altitude: 320,
-                                     pitch: 45, heading: 0)
+                                     pitch: BuildingMap.defaultPitch, heading: 0)
             uiView.fly(to: close, withDuration: 1.4, completionHandler: nil)
         }
     }
@@ -118,7 +121,22 @@ struct BuildingMap: UIViewRepresentable {
             guard !didCenter, let coord = userLocation?.coordinate,
                   CLLocationCoordinate2DIsValid(coord) else { return }
             didCenter = true
-            mapView.setCenter(coord, zoomLevel: 18, animated: true)
+            mapView.setCenter(coord, zoomLevel: BuildingMap.openZoom, animated: false)
+            diveTo(coord, on: mapView)
+        }
+
+        /// Plongée du zoom d'ouverture vers le zoom de travail, en inclinant.
+        ///
+        /// Le suivi de position doit être RELÂCHÉ : il réécrase la caméra à
+        /// chaque point reçu, ce qui remettait l'inclinaison à plat aussitôt
+        /// après l'avoir posée — la carte restait obstinément en vue de dessus.
+        func diveTo(_ coord: CLLocationCoordinate2D, on map: MLNMapView) {
+            map.userTrackingMode = .none
+            let altitude = MLNAltitudeForZoomLevel(
+                BuildingMap.workZoom, BuildingMap.defaultPitch, coord.latitude, map.frame.size)
+            let camera = MLNMapCamera(lookingAtCenter: coord, altitude: altitude,
+                                      pitch: BuildingMap.defaultPitch, heading: 0)
+            map.fly(to: camera, withDuration: 2.2, completionHandler: nil)
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
