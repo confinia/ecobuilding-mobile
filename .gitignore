@@ -9,3 +9,16 @@ DerivedData/
 *.p8
 AuthKey_*
 APPLE.local.md
+
+# Android : sorties de compilation et chemin local du SDK.
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab
+android/.idea/
+# Signature de publication : jamais dans le dépôt.
+*.jks
+*.keystore
+android/keystore.properties

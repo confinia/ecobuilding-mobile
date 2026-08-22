@@ -1,0 +1,9 @@
+<resources>
+    <!-- Thème système minimal : toute l'apparence est décrite en Compose
+         (darkColorScheme). Il ne sert qu'à éviter le flash blanc au lancement
+         et la barre de titre native. -->
+    <style name="Theme.EcoBuilding" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

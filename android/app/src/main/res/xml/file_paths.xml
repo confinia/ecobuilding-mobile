@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Uniquement les fiches téléchargées : le reste du cache reste privé. -->
+    <cache-path name="reports" path="reports/" />
+</paths>
