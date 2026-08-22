@@ -252,7 +252,7 @@ private struct RisksSection: View {
                 if !techno.isEmpty {
                     Row(label: "Technologiques", value: techno.map(Self.humanize).joined(separator: ", "))
                 }
-                Row(label: "Argiles", value: risks?["clay_shrink_swell"]?.stringValue)
+                Row(label: "Aléa retrait-gonflement", value: risks?["clay_shrink_swell"]?.stringValue)
             }
         }
     }
@@ -288,7 +288,7 @@ private struct EnvironmentSection: View {
         if depth != nil || yield != nil || eff != nil {
             SectionBox(title: "Environnement") {
                 Row(label: "Nappe phréatique", value: depth.map { String(format: "%.1f m", $0) })
-                Row(label: "Productible solaire", value: yield.map { "\(Int($0)) kWh/an par kWc" })
+                Row(label: "Potentiel solaire", value: yield.map { "\(Int($0)) kWh/an par kWc" })
                 Row(label: "Rendement du réseau d'eau", value: eff.map { String(format: "%.1f %%", $0) })
                 Row(label: "Prix de l'eau", value: water?["price_eur_m3"]?.doubleValue.map {
                     String(format: "%.2f €/m³", $0) })
@@ -308,7 +308,7 @@ private struct NeighbourhoodSection: View {
         if !medians.isEmpty || nbSchools > 0 || tax != nil {
             SectionBox(title: "Quartier") {
                 ForEach(medians.keys.sorted(), id: \.self) { k in
-                    Row(label: "Médiane \(k.lowercased())",
+                    Row(label: "Prix médian (\(k.lowercased()))",
                         value: medians[k]?["median"]?.intValue.map { "\($0) €/m²" })
                 }
                 Row(label: "Taxe foncière (bâti)", value: tax.map { String(format: "%.2f %%", $0) })
