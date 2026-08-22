@@ -48,7 +48,7 @@ struct ReportButton: View {
             if phase == .failed {
                 Text("La fiche n'a pas pu être générée. Réessayez.")
                     .font(.footnote).foregroundStyle(.orange)
-            } else if let left = quota?.summary {
+            } else if let left = quota?.summary(for: model.buildingID) {
                 // Dire ce qu'il reste AVANT d'en manquer : on découvrait la
                 // limite en la heurtant. Aucun prix affiché tant que le mur
                 // payant n'existe pas — annoncer un tarif qu'on ne peut pas

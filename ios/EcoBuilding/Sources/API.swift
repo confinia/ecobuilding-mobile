@@ -173,16 +173,25 @@ enum API {
         let reports_included: Int?      // nul = sans limite
         let reports_left: Int?
         let units: Int?                 // fiches achetées à l'unité
+        let period: String?             // "day" ou "month"
+        let free_again: [String]?       // bâtiments déjà obtenus, regratuits
 
-        /// Formulation prête à afficher, ou nil quand il n'y a rien à dire.
-        var summary: String? {
-            if let left = reports_left {
-                let unit = left > 1 ? "fiches" : "fiche"
-                var text = "\(left) \(unit) restante" + (left > 1 ? "s" : "")
-                if let u = units, u > 0 { text += " + \(u) à l'unité" }
-                return text
+        /// Ce qu'on affiche sous le bouton, ou nil quand il n'y a rien à dire.
+        ///
+        /// `building` permet de signaler qu'une fiche DÉJÀ obtenue ne coûtera
+        /// rien : sans ce mot, l'utilisateur qui voit « 2 restantes » hésite à
+        /// rouvrir un document qu'il a pourtant déjà payé.
+        func summary(for building: String?) -> String? {
+            if let b = building, free_again?.contains(b) == true {
+                return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
             }
-            return nil                  // sans limite : ne rien annoncer
+            guard let left = reports_left else { return nil }   // sans limite
+            let when = period == "month" ? "ce mois-ci" : "aujourd'hui"
+            var text = left > 1 ? "\(left) bâtiments restants \(when)"
+                                : left == 1 ? "1 bâtiment restant \(when)"
+                                : "Limite atteinte \(when)"
+            if let u = units, u > 0 { text += " · \(u) à l'unité" }
+            return text
         }
     }
 
