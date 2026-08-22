@@ -68,6 +68,7 @@ targets:
       - target: EcoBuilding
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: YES
         DEVELOPMENT_TEAM: "38WRV3R7D5"
         PRODUCT_BUNDLE_IDENTIFIER: io.confinia.ecobuilding.uitests
         SWIFT_VERSION: "5.0"

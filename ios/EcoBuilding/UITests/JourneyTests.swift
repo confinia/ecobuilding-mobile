@@ -15,7 +15,12 @@ final class JourneyTests: XCTestCase {
 
     /// L'adresse d'essai : un pavillon de plain-pied, sans DPE publié — un cas
     /// ordinaire, et justement celui qui faisait tomber la version Android.
-    private let address = "16 impasse jean jaures"
+    ///
+    /// La COMMUNE est saisie, et l'assertion porte sur elle : « 16 impasse jean
+    /// jaures » seul ramène d'abord Chevilly-Larue, et le parcours validait
+    /// joyeusement un tout autre bâtiment.
+    private let address = "16 impasse jean jaures saint vallier"
+    private let expected = "Saint-Vallier"
 
     override func setUp() {
         super.setUp()
@@ -53,14 +58,14 @@ final class JourneyTests: XCTestCase {
         // La suggestion vient de la Base Adresse Nationale : on attend le
         // RÉSEAU, pas une animation.
         let suggestion = app.buttons.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "Impasse Jean Jaur")).firstMatch
+            NSPredicate(format: "label CONTAINS[c] %@", expected)).firstMatch
         XCTAssertTrue(suggestion.waitForExistence(timeout: 25), "aucune suggestion")
         suggestion.tap()
 
         // Le serveur émet le bâtiment avant les neuf sources : la fiche doit
         // s'afficher bien avant d'être complète.
         let title = app.staticTexts.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "Jean Jaur")).firstMatch
+            NSPredicate(format: "label CONTAINS[c] %@", expected)).firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 30), "la fiche ne s'est pas ouverte")
 
         // Le bouton PDF doit être là SANS avoir à faire défiler : c'est l'objet
@@ -82,7 +87,7 @@ final class JourneyTests: XCTestCase {
         field.typeText(address)
 
         let suggestion = app.buttons.containing(
-            NSPredicate(format: "label CONTAINS[c] %@", "Impasse Jean Jaur")).firstMatch
+            NSPredicate(format: "label CONTAINS[c] %@", expected)).firstMatch
         XCTAssertTrue(suggestion.waitForExistence(timeout: 25))
         suggestion.tap()
 
