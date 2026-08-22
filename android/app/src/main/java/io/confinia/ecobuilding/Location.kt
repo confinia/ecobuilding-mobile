@@ -46,14 +46,16 @@ object UserLocation {
             .maxByOrNull { it.time }
             ?.let { onFix(LatLng(it.latitude, it.longitude)); return }
 
-        val provider = when {
-            LocationManager.FUSED_PROVIDER in providers -> LocationManager.FUSED_PROVIDER
-            LocationManager.GPS_PROVIDER in providers -> LocationManager.GPS_PROVIDER
-            LocationManager.NETWORK_PROVIDER in providers -> LocationManager.NETWORK_PROVIDER
-            else -> return
-        }
+        // On écoute TOUS les fournisseurs actifs, et le premier qui répond
+        // gagne. Se limiter à un seul laissait la carte sur la France entière :
+        // en intérieur, le GPS peut ne jamais aboutir alors que le réseau
+        // répond en quelques secondes — et l'inverse en pleine campagne.
+        if (providers.isEmpty()) return
+        var delivered = false
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
+                if (delivered) return
+                delivered = true
                 manager.removeUpdates(this)
                 onFix(LatLng(location.latitude, location.longitude))
             }
@@ -62,8 +64,10 @@ object UserLocation {
             override fun onProviderDisabled(provider: String) {}
             override fun onProviderEnabled(provider: String) {}
         }
-        runCatching {
-            manager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+        providers.forEach { provider ->
+            runCatching {
+                manager.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+            }
         }
     }
 }

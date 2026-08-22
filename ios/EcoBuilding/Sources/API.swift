@@ -212,24 +212,23 @@ enum API {
             if let b = building, free_again?.contains(b) == true {
                 return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
             }
-            guard let left = reports_left else { return nil }   // sans limite
+            guard let total = reports_included else { return nil }   // sans limite
             // Sans indication du serveur, on n'invente pas : un vieux serveur
             // compte au MOIS, et annoncer « aujourd'hui » serait faux.
             let when = period == "month" ? "ce mois-ci"
                      : period == "day" ? "aujourd'hui" : ""
             var text: String
-            if left == 0 {
-                // Un mur doit DIRE ce qui a été consommé et quand il rouvre.
-                // « Limite atteinte » seul laisse croire à un blocage définitif
-                // et n'indique pas si l'on s'est trompé de compte.
-                let total = reports_included.map(String.init) ?? "?"
-                text = "Limite atteinte : \(reports_used) bâtiments sur \(total) " + when
-                if let again = reopensIn { text += " — elle repart \(again)" }
+            if reports_left == 0 {
+                // Un mur doit DIRE quand il rouvre : « limite atteinte » seul
+                // laisse croire à un blocage définitif.
+                text = "\(total)/\(total)"
+                if let again = reopensIn { text += " — la limite repart \(again)" }
             } else {
-                let total = reports_included.map { " sur \($0)" } ?? ""
-                let suffix = when.isEmpty ? total : " \(when)\(total)"
-                text = left > 1 ? "\(left) bâtiments restants\(suffix)"
-                                : "1 bâtiment restant\(suffix)"
+                // CONSOMMATION, et non solde restant : « 10 bâtiments restants
+                // sur 10 » se lisait comme un compteur déjà plein, et alarmait
+                // avant même le premier usage.
+                text = "\(reports_used)/\(total) fiches"
+                if !when.isEmpty { text += " \(when)" }
             }
             if let u = units, u > 0 { text += " · \(u) à l'unité" }
             return text

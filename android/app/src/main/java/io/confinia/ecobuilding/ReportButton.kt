@@ -70,7 +70,10 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
             },
             enabled = !running && model.buildingId != null,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0.17f, 0.48f, 0.29f)),
+            // La couleur du TEXTE doit être dite : sans elle, Material peint le
+            // libellé dans la teinte du thème — du violet sur du vert, illisible.
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0.17f, 0.48f, 0.29f), contentColor = Color.White),
         ) {
             Icon(if (running) Icons.Filled.Autorenew else Icons.Filled.Description,
                 contentDescription = null)

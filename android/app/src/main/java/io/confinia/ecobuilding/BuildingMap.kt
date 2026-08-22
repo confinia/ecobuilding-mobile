@@ -69,10 +69,24 @@ private val DPE_DARK = arrayOf(
     "G" to Color.rgb(125, 15, 15),
 )
 
+/**
+ * `["match", classe, "A", couleurA, …, défaut]`.
+ *
+ * L'expression est construite à plat, et la valeur par défaut placée EN
+ * DERNIER : la surcharge `match(entrée, défaut, étapes…)` de MapLibre est
+ * ambiguë depuis Kotlin, et l'appel partait sur la forme variadique — le défaut
+ * devenait la première étiquette, « A » la première couleur, et le moteur
+ * refusait tout (« Could not parse color from value 'A' »). Les bâtiments
+ * sortaient alors sans aucune couleur DPE, sans que rien n'échoue à la
+ * compilation.
+ *
+ * Et `color()`, pas `literal()` : un entier littéral n'est pas une couleur pour
+ * le moteur de style.
+ */
 private fun dpeMatch(palette: Array<Pair<String, Int>>, fallback: Int) =
-    match(get("classe_bilan_dpe"),
-        literal(fallback),
-        *palette.flatMap { (k, c) -> listOf(literal(k), literal(c)) }.toTypedArray())
+    match(*(listOf(get("classe_bilan_dpe")) +
+        palette.flatMap { (k, c) -> listOf(literal(k), color(c)) } +
+        listOf(color(fallback))).toTypedArray())
 
 @SuppressLint("ClickableViewAccessibility")
 @Composable
