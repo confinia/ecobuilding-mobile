@@ -1,6 +1,6 @@
 # EcoBuilding — applications mobiles
 
-Applications iOS (et à venir Android) d'EcoBuilding : carte 3D des bâtiments
+Applications iOS et Android d'EcoBuilding : carte 3D des bâtiments
 français colorés par classe énergétique, fiche détaillée, fiche PDF partageable.
 
 **Sous licence AGPL-3.0.** Ce dépôt est séparé de
@@ -22,6 +22,27 @@ cd ios && xcodegen && open EcoBuilding.xcodeproj
 
 Le `.xcodeproj` est **généré** depuis `ios/project.yml` et n'est pas versionné :
 Xcode le réécrit sans cesse et ses conflits sont ingérables.
+
+## Android
+
+```sh
+brew install openjdk@21
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+export ANDROID_HOME=$HOME/Library/Android/sdk
+cd android && ./gradlew :app:assembleDebug
+$ANDROID_HOME/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+`local.properties` (chemin du SDK) est **local** et n'est pas versionné ;
+`assembleDebug` le crée au besoin, ou écrivez-y `sdk.dir=$ANDROID_HOME`.
+
+L'application vise Android 8.0 (API 26) et au-delà : cela couvre la quasi-
+totalité du parc encore en service, sans traîner de code de compatibilité pour
+des versions que plus personne n'utilise.
+
+Elle ne dépend PAS des services Google Play — position lue via `LocationManager`,
+cartes par MapLibre. Elle tourne donc telle quelle sur les appareils vendus sans
+services Google, et aucune dépendance propriétaire ne s'impose aux utilisateurs.
 
 ## Compiler et installer sans Xcode
 

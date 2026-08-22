@@ -1,0 +1,10 @@
+<!-- Trois immeubles, comme sur le site : le même signe partout, sinon
+     l'utilisateur ne fait pas le lien entre l'app et le service. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:pathData="M30,72h14v-30h-14z" />
+    <path android:fillColor="#DFF0D8" android:pathData="M47,72h14v-42h-14z" />
+    <path android:fillColor="#A5CC74" android:pathData="M64,72h14v-22h-14z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M26,72h56v3h-56z" />
+</vector>

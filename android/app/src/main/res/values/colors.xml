@@ -1,0 +1,5 @@
+<resources>
+    <!-- Vert DPE « A » : la même identité que le site et l'iPhone. -->
+    <color name="ic_launcher_background">#008F36</color>
+    <color name="window_background">#12100E</color>
+</resources>
