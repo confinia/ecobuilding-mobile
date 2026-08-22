@@ -317,11 +317,50 @@ struct BuildingMap: UIViewRepresentable {
             }
         }
 
+        /// Trouve le bâtiment VISÉ, et non celui dont l'emprise est sous le doigt.
+        ///
+        /// MapLibre teste la collision sur l'emprise au SOL. Incliné, le toit
+        /// qu'on voit est décalé vers le haut de l'écran : viser le bâtiment
+        /// qu'on regarde ne sélectionnait rien, ou pire, le voisin de derrière.
+        /// On cherche donc aussi SOUS le point touché, puis on retient celui
+        /// dont le toit — position au sol remontée de sa hauteur — tombe le plus
+        /// près du doigt.
+        static func hitTest(_ point: CGPoint, on map: MLNMapView) -> [MLNFeature] {
+            let direct = map.visibleFeatures(at: point,
+                                             styleLayerIdentifiers: [BuildingMap.layerID])
+            if !direct.isEmpty { return direct }
+            guard map.camera.pitch > 5 else { return [] }
+
+            // Bande de recherche vers le bas : c'est là que se trouvent les
+            // emprises des bâtiments dont on voit le toit plus haut.
+            let reach: CGFloat = 200
+            let strip = CGRect(x: point.x - 30, y: point.y, width: 60, height: reach)
+            let candidates = map.visibleFeatures(in: strip,
+                                                 styleLayerIdentifiers: [BuildingMap.layerID])
+            guard !candidates.isEmpty else { return [] }
+
+            let mpp = map.metersPerPoint(atLatitude: map.centerCoordinate.latitude)
+            let lift = sin(map.camera.pitch * .pi / 180) / max(mpp, 0.0001)
+            let best = candidates.min { a, b in
+                Self.roofDistance(a, from: point, on: map, lift: lift)
+                    < Self.roofDistance(b, from: point, on: map, lift: lift)
+            }
+            return best.map { [$0] } ?? []
+        }
+
+        /// Distance entre le doigt et le TOIT présumé d'un bâtiment candidat.
+        private static func roofDistance(_ f: MLNFeature, from point: CGPoint,
+                                         on map: MLNMapView, lift: Double) -> CGFloat {
+            let ground = map.convert(f.coordinate, toPointTo: map)
+            let height = (f.attribute(forKey: "hauteur_mean") as? NSNumber)?.doubleValue ?? 6
+            let roof = CGPoint(x: ground.x, y: ground.y - CGFloat(height * lift))
+            return hypot(roof.x - point.x, roof.y - point.y)
+        }
+
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let map, gesture.state == .ended else { return }
             let point = gesture.location(in: map)
-            let features = map.visibleFeatures(
-                at: point, styleLayerIdentifiers: [BuildingMap.layerID])
+            let features = BuildingMap.Coordinator.hitTest(point, on: map)
             guard let feature = features.first,
                   let id = feature.attribute(forKey: "batiment_groupe_id") as? String
             else {
