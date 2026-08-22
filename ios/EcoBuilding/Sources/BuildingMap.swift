@@ -27,6 +27,8 @@ struct BuildingMap: UIViewRepresentable {
     /// des bâtiments visibles elle décrivait — d'autant qu'un « bâtiment
     /// groupe » BDNB couvre parfois plusieurs adresses.
     var highlighted: String?
+    /// Fond photo aérienne plutôt que plan.
+    var aerial: Bool = false
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /// Vue d'ouverture, avant la plongée : assez large pour situer le quartier.
@@ -38,6 +40,15 @@ struct BuildingMap: UIViewRepresentable {
     static let defaultPitch: CGFloat = 30
     private static let sourceID = "bdnb"
     private static let layerID = "bdnb-dpe-3d"
+    fileprivate static let aerialLayerID = "ign-ortho"
+    /// Photo aérienne de l'IGN — Licence Ouverte, sans clé ni compte.
+    /// C'est elle qui montre ce qu'un acheteur veut voir : le terrain, les
+    /// arbres, la piscine, le portail — rien de tout cela n'existe en donnée
+    /// structurée, mais l'image le montre (#258).
+    private static let orthoURL =
+        "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
+        + "&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM"
+        + "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg"
     fileprivate static let selectedLayerID = "bdnb-selected"
 
     func makeUIView(context: Context) -> MLNMapView {
@@ -76,6 +87,17 @@ struct BuildingMap: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: MLNMapView, context: Context) {
+        context.coordinator.aerialLayer?.isVisible = aerial
+        // Sur la photo, les libellés du plan deviennent illisibles et le fond
+        // n'a plus lieu d'être : on masque tout sauf nos volumes.
+        if let style = uiView.style {
+            for layer in style.layers
+            where layer.identifier != BuildingMap.aerialLayerID
+                && layer.identifier != BuildingMap.layerID
+                && layer.identifier != BuildingMap.selectedLayerID {
+                layer.isVisible = !aerial
+            }
+        }
         // Surlignage piloté depuis l'extérieur (résultat de recherche).
         if context.coordinator.lastHighlighted != highlighted {
             context.coordinator.lastHighlighted = highlighted
@@ -108,6 +130,7 @@ struct BuildingMap: UIViewRepresentable {
     final class Coordinator: NSObject, MLNMapViewDelegate {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
+        var aerialLayer: MLNRasterStyleLayer?
         var lastFocus: CLLocationCoordinate2D?
         var lastHighlighted: String?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
@@ -162,6 +185,27 @@ struct BuildingMap: UIViewRepresentable {
             for layer in style.layers where layer.identifier.contains("building") {
                 style.removeLayer(layer)
             }
+
+            // Photo aérienne, SOUS les volumes : on voit sa maison, et sa
+            // couleur énergétique par-dessus.
+            let ortho = MLNRasterTileSource(
+                identifier: "ign-ortho-src",
+                tileURLTemplates: [BuildingMap.orthoURL],
+                options: [.tileSize: 256,
+                          .attributionInfos: [
+                              MLNAttributionInfo(title: NSAttributedString(string: "IGN — BD ORTHO"),
+                                                 url: URL(string: "https://geoservices.ign.fr"))
+                          ]])
+            style.addSource(ortho)
+            let orthoLayer = MLNRasterStyleLayer(identifier: BuildingMap.aerialLayerID,
+                                                 source: ortho)
+            orthoLayer.isVisible = false
+            if let first = style.layers.first {
+                style.insertLayer(orthoLayer, below: first)
+            } else {
+                style.addLayer(orthoLayer)
+            }
+            aerialLayer = orthoLayer
 
             let source = MLNVectorTileSource(
                 identifier: BuildingMap.sourceID,

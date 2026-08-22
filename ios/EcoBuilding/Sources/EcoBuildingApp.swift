@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var armed: String?
     /// Bâtiment mis en évidence sur la carte (touché OU trouvé par recherche).
     @State private var highlighted: String?
+    /// Fond photo plutôt que plan.
+    @State private var aerial = false
     /// Point que la carte doit rejoindre (adresse trouvée).
     @State private var focus: CLLocationCoordinate2D?
 
@@ -60,7 +62,7 @@ struct ContentView: View {
                 armed = nil
                 highlighted = id
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted)
+            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted, aerial: aerial)
             .ignoresSafeArea()
 
             SearchField(text: $search, onPick: { s in
@@ -78,6 +80,25 @@ struct ContentView: View {
             })
             .padding(.horizontal, 12)
             .padding(.top, 8)          // ne pas coller à la barre d'état
+
+            // Bascule plan / photo aérienne. Placée en haut à droite, sous la
+            // recherche : c'est le premier geste d'un acheteur qui veut « voir
+            // le bien » plutôt que des volumes (#258).
+            VStack {
+                HStack {
+                    Spacer()
+                    Button { aerial.toggle() } label: {
+                        Image(systemName: aerial ? "map.fill" : "globe.europe.africa.fill")
+                            .font(.title3)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .padding(.trailing, 12)
+                    .accessibilityLabel(aerial ? "Afficher le plan" : "Afficher la photo aérienne")
+                }
+                .padding(.top, 72)
+                Spacer()
+            }
 
             // Sans ce mot, le premier appui paraît sans effet et l'utilisateur
             // conclut que la carte ne répond pas.
