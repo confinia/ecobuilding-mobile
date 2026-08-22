@@ -1,5 +1,14 @@
 import Foundation
 
+extension ISO8601DateFormatter {
+    /// Le serveur peut inclure des fractions de seconde selon la plateforme.
+    static let withFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+}
+
 /// Client de l'API EcoBuilding (`/v1`).
 ///
 /// L'app ne calcule rien : toute l'intelligence métier est côté serveur, et les
@@ -175,6 +184,24 @@ enum API {
         let units: Int?                 // fiches achetées à l'unité
         let period: String?             // "day" ou "month"
         let free_again: [String]?       // bâtiments déjà obtenus, regratuits
+        let resets_at: String?          // ISO 8601 : instant de réouverture
+
+        /// « dans 3 heures », « dans 12 minutes ». Une durée se comprend d'un
+        /// coup d'œil, là où « demain » ne dit rien à 23 h 50.
+        var reopensIn: String? {
+            guard let iso = resets_at,
+                  let when = ISO8601DateFormatter().date(from: iso)
+                    ?? ISO8601DateFormatter.withFractional.date(from: iso)
+            else { return nil }
+            let seconds = when.timeIntervalSinceNow
+            guard seconds > 0 else { return nil }
+            if seconds < 3600 {
+                let m = max(1, Int(seconds / 60))
+                return "dans \(m) minute" + (m > 1 ? "s" : "")
+            }
+            let h = Int(seconds / 3600)
+            return "dans \(h) heure" + (h > 1 ? "s" : "")
+        }
 
         /// Ce qu'on affiche sous le bouton, ou nil quand il n'y a rien à dire.
         ///
@@ -186,20 +213,23 @@ enum API {
                 return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
             }
             guard let left = reports_left else { return nil }   // sans limite
-            let when = period == "month" ? "ce mois-ci" : "aujourd'hui"
+            // Sans indication du serveur, on n'invente pas : un vieux serveur
+            // compte au MOIS, et annoncer « aujourd'hui » serait faux.
+            let when = period == "month" ? "ce mois-ci"
+                     : period == "day" ? "aujourd'hui" : ""
             var text: String
             if left == 0 {
                 // Un mur doit DIRE ce qui a été consommé et quand il rouvre.
                 // « Limite atteinte » seul laisse croire à un blocage définitif
                 // et n'indique pas si l'on s'est trompé de compte.
                 let total = reports_included.map(String.init) ?? "?"
-                text = "Limite atteinte : \(reports_used) bâtiments sur \(total) "
-                     + when + (period == "month" ? " — elle repart le 1er du mois"
-                                                 : " — elle repart demain")
+                text = "Limite atteinte : \(reports_used) bâtiments sur \(total) " + when
+                if let again = reopensIn { text += " — elle repart \(again)" }
             } else {
                 let total = reports_included.map { " sur \($0)" } ?? ""
-                text = left > 1 ? "\(left) bâtiments restants \(when)\(total)"
-                                : "1 bâtiment restant \(when)\(total)"
+                let suffix = when.isEmpty ? total : " \(when)\(total)"
+                text = left > 1 ? "\(left) bâtiments restants\(suffix)"
+                                : "1 bâtiment restant\(suffix)"
             }
             if let u = units, u > 0 { text += " · \(u) à l'unité" }
             return text
