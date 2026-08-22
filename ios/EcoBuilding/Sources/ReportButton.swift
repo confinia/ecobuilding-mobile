@@ -18,6 +18,7 @@ struct ReportButton: View {
     @State private var elapsed = 0
     @State private var pdf: URL?
     @State private var timer: Timer?
+    @State private var quota: API.Quota?
 
     enum Phase: Equatable {
         case idle, running, failed
@@ -44,17 +45,19 @@ struct ReportButton: View {
             }
             .disabled(phase == .running || model.buildingID == nil)
 
-            // BÊTA : aucun message de quota ni de prix. Les premiers testeurs
-            // sont des partenaires du métier, pas des clients — leur retour vaut
-            // plus que la vente, et un mur tarifaire en pleine démonstration
-            // devant un client serait un blocage inacceptable. Le mur payant
-            // reviendra avec StoreKit, une fois les retours recueillis.
             if phase == .failed {
                 Text("La fiche n'a pas pu être générée. Réessayez.")
                     .font(.footnote).foregroundStyle(.orange)
+            } else if let left = quota?.summary {
+                // Dire ce qu'il reste AVANT d'en manquer : on découvrait la
+                // limite en la heurtant. Aucun prix affiché tant que le mur
+                // payant n'existe pas — annoncer un tarif qu'on ne peut pas
+                // encaisser serait un mensonge.
+                Text(left).font(.footnote).foregroundStyle(.secondary)
             }
         }
         .sheet(item: $pdf) { url in PDFPreview(url: url) }
+        .task { quota = try? await API.quota() }
     }
 
     private var stageLabel: String {
@@ -78,7 +81,8 @@ struct ReportButton: View {
             do {
                 let url = try await API.report(buildingID: id, lon: model.lon, lat: model.lat)
                 phase = .idle
-                pdf = url                       // ouvre le partage système
+                pdf = url                       // ouvre le lecteur
+                quota = try? await API.quota()  // le solde vient de changer
             } catch {
                 phase = .failed
             }

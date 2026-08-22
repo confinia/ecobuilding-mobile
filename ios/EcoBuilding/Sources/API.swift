@@ -164,6 +164,33 @@ enum API {
         return dest
     }
 
+    // MARK: - Quota
+
+    /// Ce qu'il reste, lu AVANT de proposer une fiche.
+    struct Quota: Decodable {
+        let plan: String
+        let reports_used: Int
+        let reports_included: Int?      // nul = sans limite
+        let reports_left: Int?
+        let units: Int?                 // fiches achetées à l'unité
+
+        /// Formulation prête à afficher, ou nil quand il n'y a rien à dire.
+        var summary: String? {
+            if let left = reports_left {
+                let unit = left > 1 ? "fiches" : "fiche"
+                var text = "\(left) \(unit) restante" + (left > 1 ? "s" : "")
+                if let u = units, u > 0 { text += " + \(u) à l'unité" }
+                return text
+            }
+            return nil                  // sans limite : ne rien annoncer
+        }
+    }
+
+    static func quota() async throws -> Quota {
+        let (data, _) = try await URLSession.shared.data(for: request("quota"))
+        return try JSONDecoder().decode(Quota.self, from: data)
+    }
+
     // MARK: - Offre (jamais de prix en dur dans l'app)
 
     struct MobileOffer: Decodable {
