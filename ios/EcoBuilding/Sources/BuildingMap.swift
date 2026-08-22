@@ -29,6 +29,8 @@ struct BuildingMap: UIViewRepresentable {
     var highlighted: String?
     /// Fond photo aérienne plutôt que plan.
     var aerial: Bool = false
+    /// Épingle posée sur le bâtiment concerné.
+    var pin: CLLocationCoordinate2D?
 
     static let tilesURL = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /// Vue d'ouverture, avant la plongée : assez large pour situer le quartier.
@@ -41,6 +43,7 @@ struct BuildingMap: UIViewRepresentable {
     private static let sourceID = "bdnb"
     private static let layerID = "bdnb-dpe-3d"
     fileprivate static let aerialLayerID = "ign-ortho"
+    fileprivate static let outlineLayerID = "bdnb-selected-outline"
     /// Photo aérienne de l'IGN — Licence Ouverte, sans clé ni compte.
     /// C'est elle qui montre ce qu'un acheteur veut voir : le terrain, les
     /// arbres, la piscine, le portail — rien de tout cela n'existe en donnée
@@ -90,11 +93,32 @@ struct BuildingMap: UIViewRepresentable {
         // La photo est opaque et posée au-dessus du plan : la rendre visible
         // suffit, rien à masquer. Nos volumes, ajoutés après, restent dessus.
         context.coordinator.aerialLayer?.isVisible = aerial
+        // Sur la photo, on masque les volumes : ils cachent précisément le
+        // bâtiment qu'on est venu regarder. Le contour, lui, reste.
+        if let style = uiView.style {
+            style.layer(withIdentifier: BuildingMap.layerID)?.isVisible = !aerial
+            style.layer(withIdentifier: BuildingMap.selectedLayerID)?.isVisible = !aerial
+        }
+        // Épingle : un repère qui survit au changement de fond et au zoom.
+        if let pin, CLLocationCoordinate2DIsValid(pin) {
+            if let existing = context.coordinator.pinAnnotation {
+                existing.coordinate = pin
+            } else {
+                let a = MLNPointAnnotation()
+                a.coordinate = pin
+                uiView.addAnnotation(a)
+                context.coordinator.pinAnnotation = a
+            }
+        } else if let existing = context.coordinator.pinAnnotation {
+            uiView.removeAnnotation(existing)
+            context.coordinator.pinAnnotation = nil
+        }
         // Surlignage piloté depuis l'extérieur (résultat de recherche).
         if context.coordinator.lastHighlighted != highlighted {
             context.coordinator.lastHighlighted = highlighted
-            context.coordinator.selectedLayer?.predicate =
-                NSPredicate(format: "batiment_groupe_id == %@", highlighted ?? "")
+            let p = NSPredicate(format: "batiment_groupe_id == %@", highlighted ?? "")
+            context.coordinator.selectedLayer?.predicate = p
+            context.coordinator.outlineLayer?.predicate = p
         }
         guard let focus, CLLocationCoordinate2DIsValid(focus) else { return }
         // Ne rejouer l'animation que si la cible a changé.
@@ -123,6 +147,8 @@ struct BuildingMap: UIViewRepresentable {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         var aerialLayer: MLNRasterStyleLayer?
+        var outlineLayer: MLNLineStyleLayer?
+        var pinAnnotation: MLNPointAnnotation?
         var lastFocus: CLLocationCoordinate2D?
         var lastHighlighted: String?
         let onSelect: (String, CLLocationCoordinate2D) -> Void
@@ -268,10 +294,26 @@ struct BuildingMap: UIViewRepresentable {
             highlight.fillExtrusionOpacity = NSExpression(forConstantValue: 1.0)
             style.addLayer(highlight)
             selectedLayer = highlight
+
+            // Contour au sol du bâtiment retenu. Sur la photo, les volumes
+            // cachent le toit qu'on veut justement voir : un trait ne masque
+            // rien, et désigne sans ambiguïté.
+            let outline = MLNLineStyleLayer(identifier: BuildingMap.outlineLayerID,
+                                            source: source)
+            outline.sourceLayerIdentifier = "sql_statement"
+            outline.minimumZoomLevel = 14
+            outline.predicate = NSPredicate(format: "batiment_groupe_id == %@", "")
+            outline.lineColor = NSExpression(forConstantValue: UIColor.systemBlue)
+            outline.lineWidth = NSExpression(forConstantValue: 3)
+            outline.lineOpacity = NSExpression(forConstantValue: 0.95)
+            style.addLayer(outline)
+            outlineLayer = outline
             // Le style se charge parfois APRÈS la recherche : sans ce rappel,
             // le premier bâtiment cherché n'était jamais surligné.
             if let id = lastHighlighted {
-                highlight.predicate = NSPredicate(format: "batiment_groupe_id == %@", id)
+                let p = NSPredicate(format: "batiment_groupe_id == %@", id)
+                highlight.predicate = p
+                outlineLayer?.predicate = p
             }
         }
 
@@ -286,11 +328,15 @@ struct BuildingMap: UIViewRepresentable {
                 // Appui à côté : on désarme, plutôt que de garder une sélection
                 // fantôme que le prochain appui confirmerait par surprise.
                 armed = nil
-                selectedLayer?.predicate = NSPredicate(format: "batiment_groupe_id == %@", "")
+                let none = NSPredicate(format: "batiment_groupe_id == %@", "")
+                selectedLayer?.predicate = none
+                outlineLayer?.predicate = none
                 onHighlight(nil)
                 return
             }
-            selectedLayer?.predicate = NSPredicate(format: "batiment_groupe_id == %@", id)
+            let p = NSPredicate(format: "batiment_groupe_id == %@", id)
+            selectedLayer?.predicate = p
+            outlineLayer?.predicate = p
 
             // DEUX temps : le premier appui désigne, le second charge. Avec de
             // l'inclinaison, la visée tombe souvent sur le voisin — un appui

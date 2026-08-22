@@ -25,6 +25,8 @@ struct ContentView: View {
     @State private var highlighted: String?
     /// Fond photo plutôt que plan.
     @State private var aerial = false
+    /// Épingle sur le bâtiment concerné.
+    @State private var pin: CLLocationCoordinate2D?
     /// Point que la carte doit rejoindre (adresse trouvée).
     @State private var focus: CLLocationCoordinate2D?
 
@@ -61,8 +63,9 @@ struct ContentView: View {
             BuildingMap(onSelect: { id, coord in
                 armed = nil
                 highlighted = id
+                pin = coord
                 selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
-            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted, aerial: aerial)
+            }, onHighlight: { id in armed = id }, focus: focus, highlighted: highlighted, aerial: aerial, pin: pin)
             .ignoresSafeArea()
 
             // Bascule plan / photo aérienne. Placée en haut à droite, sous la
@@ -87,7 +90,9 @@ struct ContentView: View {
             }
 
             SearchField(text: $search, onPick: { s in
-                focus = CLLocationCoordinate2D(latitude: s.lat, longitude: s.lon)
+                let point = CLLocationCoordinate2D(latitude: s.lat, longitude: s.lon)
+                focus = point
+                pin = point
                 if let ban = s.banID {
                     selection = .suggestion(banID: ban, lon: s.lon, lat: s.lat, label: s.label)
                 } else {

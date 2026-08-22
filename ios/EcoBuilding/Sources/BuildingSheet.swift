@@ -31,6 +31,11 @@ final class BuildingModel: ObservableObject {
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
+    /// Appelé dès que le flux a livré le bâtiment, pour que la carte le mette
+    /// en évidence. Branché ICI plutôt que sur une détection de changement de
+    /// vue : le rappel doit partir quand la DONNÉE arrive, pas quand SwiftUI
+    /// décide de réévaluer un corps — c'est ce qui l'avait rendu muet.
+    var onResolved: ((String) -> Void)?
     private(set) var lon: Double?
     private(set) var lat: Double?
 
@@ -56,6 +61,7 @@ final class BuildingModel: ObservableObject {
                 case let .core(query, buildings):
                     address = query["address"]?.stringValue
                     building = buildings.first
+                    if let id = buildingID { onResolved?(id) }
                 case let .block(name, value):
                     blocks[name] = value
                     pending.remove(name)
@@ -133,7 +139,10 @@ struct BuildingSheet: View {
                 .background(.regularMaterial)
         }
       }
-      .task { await model.load(target) }
+      .task {
+          model.onResolved = onBuildingResolved
+          await model.load(target)
+      }
     }
 }
 
