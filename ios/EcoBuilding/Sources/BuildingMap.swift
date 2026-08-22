@@ -43,6 +43,15 @@ struct BuildingMap: UIViewRepresentable {
     private static let sourceID = "bdnb"
     private static let layerID = "bdnb-dpe-3d"
     fileprivate static let aerialLayerID = "ign-ortho"
+    fileprivate static let parcelsLayerID = "ign-parcelles"
+    /// Limites de parcelles cadastrales — IGN, Licence Ouverte, sans clé.
+    ///
+    /// « Où s'arrêtent les terrains ? » est une des premières questions d'un
+    /// acheteur, et la photo seule n'y répond pas.
+    fileprivate static let parcelsURL =
+        "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0"
+        + "&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI%20vecteur&TILEMATRIXSET=PM"
+        + "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
     fileprivate static let outlineLayerID = "bdnb-selected-outline"
     /// Photo aérienne de l'IGN — Licence Ouverte, sans clé ni compte.
     /// C'est elle qui montre ce qu'un acheteur veut voir : le terrain, les
@@ -93,6 +102,9 @@ struct BuildingMap: UIViewRepresentable {
         // La photo est opaque et posée au-dessus du plan : la rendre visible
         // suffit, rien à masquer. Nos volumes, ajoutés après, restent dessus.
         context.coordinator.aerialLayer?.isVisible = aerial
+        // Les limites ne s'affichent qu'AVEC la photo : sur le plan, elles
+        // parasiteraient une lecture qui porte sur les bâtiments.
+        context.coordinator.parcelsLayer?.isVisible = aerial
         // Sur la photo, on efface les volumes : ils cachent précisément le
         // bâtiment qu'on est venu regarder. Le contour, lui, reste.
         //
@@ -100,11 +112,15 @@ struct BuildingMap: UIViewRepresentable {
         // RENDUES. Masquée, la couche des volumes ne répondait plus à
         // `visibleFeatures`, et toucher un bâtiment en vue photo ne
         // sélectionnait plus rien — le geste même qu'on vient chercher ici.
+        //
+        // 1 % et non 0 : vérifié sur émulateur, une opacité STRICTEMENT nulle
+        // n'est pas indexée non plus. À 1 % la couche reste interrogeable et
+        // demeure invisible à l'œil.
         if let style = uiView.style {
             (style.layer(withIdentifier: BuildingMap.layerID) as? MLNFillExtrusionStyleLayer)?
-                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0 : 0.9)
+                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0.01 : 0.9)
             (style.layer(withIdentifier: BuildingMap.selectedLayerID) as? MLNFillExtrusionStyleLayer)?
-                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0 : 1.0)
+                .fillExtrusionOpacity = NSExpression(forConstantValue: aerial ? 0.01 : 1.0)
         }
         // Épingle : un repère qui survit au changement de fond et au zoom.
         if let pin, CLLocationCoordinate2DIsValid(pin) {
@@ -154,6 +170,7 @@ struct BuildingMap: UIViewRepresentable {
         weak var map: MLNMapView?
         var selectedLayer: MLNFillExtrusionStyleLayer?
         var aerialLayer: MLNRasterStyleLayer?
+        var parcelsLayer: MLNRasterStyleLayer?
         var outlineLayer: MLNLineStyleLayer?
         var pinAnnotation: MLNPointAnnotation?
         var lastFocus: CLLocationCoordinate2D?
@@ -227,6 +244,24 @@ struct BuildingMap: UIViewRepresentable {
             orthoLayer.isVisible = false
             style.addLayer(orthoLayer)      // au-dessus du plan, sous nos volumes
             aerialLayer = orthoLayer
+
+            let parcels = MLNRasterTileSource(
+                identifier: "ign-parcelles-src",
+                tileURLTemplates: [BuildingMap.parcelsURL],
+                options: [.tileSize: 256,
+                          .attributionInfos: [
+                              MLNAttributionInfo(title: NSAttributedString(string: "IGN — Parcellaire Express"),
+                                                 url: URL(string: "https://geoservices.ign.fr"))
+                          ]])
+            style.addSource(parcels)
+            let parcelsLayer = MLNRasterStyleLayer(identifier: BuildingMap.parcelsLayerID,
+                                                   source: parcels)
+            parcelsLayer.isVisible = false
+            // Assez marqué pour se lire sur une toiture claire comme sur des
+            // arbres, sans masquer la photo qu'on est venu regarder.
+            parcelsLayer.rasterOpacity = NSExpression(forConstantValue: 0.85)
+            style.addLayer(parcelsLayer)    // au-dessus de la photo
+            self.parcelsLayer = parcelsLayer
 
             let source = MLNVectorTileSource(
                 identifier: BuildingMap.sourceID,
@@ -332,42 +367,90 @@ struct BuildingMap: UIViewRepresentable {
         /// On cherche donc aussi SOUS le point touché, puis on retient celui
         /// dont le toit — position au sol remontée de sa hauteur — tombe le plus
         /// près du doigt.
-        static func hitTest(_ point: CGPoint, on map: MLNMapView) -> [MLNFeature] {
+        static func hitTest(_ point: CGPoint, on map: MLNMapView,
+                            aerial: Bool) -> [MLNFeature] {
             let direct = map.visibleFeatures(at: point,
                                              styleLayerIdentifiers: [BuildingMap.layerID])
-            if !direct.isEmpty { return direct }
-            guard map.camera.pitch > 5 else { return [] }
+            // En vue photo les volumes sont effacés : ce qu'on voit EST
+            // l'emprise au sol, posée à plat sur l'orthophoto. La visée directe
+            // est alors exacte, et c'est elle qu'il faut.
+            if aerial || map.camera.pitch <= 5 { return direct }
 
-            // Bande de recherche vers le bas : c'est là que se trouvent les
-            // emprises des bâtiments dont on voit le toit plus haut.
-            let reach: CGFloat = 200
-            let strip = CGRect(x: point.x - 30, y: point.y, width: 60, height: reach)
+            // Bande large et surtout HAUTE vers le bas : c'est là que se
+            // trouvent les emprises des bâtiments dont on voit le toit plus
+            // haut. On ne court-circuite JAMAIS sur le résultat direct dès que
+            // la caméra est inclinée : il renvoie presque toujours quelque
+            // chose, et c'est le voisin de derrière.
+            let strip = CGRect(x: point.x - 30, y: point.y - 15, width: 60, height: 300)
             let candidates = map.visibleFeatures(in: strip,
                                                  styleLayerIdentifiers: [BuildingMap.layerID])
-            guard !candidates.isEmpty else { return [] }
+            guard !candidates.isEmpty else { return direct }
 
             let mpp = map.metersPerPoint(atLatitude: map.centerCoordinate.latitude)
             let lift = sin(map.camera.pitch * .pi / 180) / max(mpp, 0.0001)
-            let best = candidates.min { a, b in
-                Self.roofDistance(a, from: point, on: map, lift: lift)
-                    < Self.roofDistance(b, from: point, on: map, lift: lift)
+
+            var best: MLNFeature?
+            var bestHeight = -1.0
+            var fallback: MLNFeature?
+            var fallbackDistance = CGFloat.greatestFiniteMagnitude
+
+            for feature in candidates {
+                let height = (feature.attribute(forKey: "hauteur_mean") as? NSNumber)?
+                    .doubleValue ?? 6
+                let roof = roofPolygon(feature, on: map, lift: height * lift)
+                if roof.count > 2, contains(roof, point) {
+                    // Plusieurs toits peuvent se recouvrir : le plus haut est
+                    // celui qui est dessiné devant, donc celui qu'on voit.
+                    if height > bestHeight { bestHeight = height; best = feature }
+                } else if best == nil {
+                    let ground = map.convert(feature.coordinate, toPointTo: map)
+                    let centre = CGPoint(x: ground.x, y: ground.y - CGFloat(height * lift))
+                    let d = hypot(centre.x - point.x, centre.y - point.y)
+                    if d < fallbackDistance { fallbackDistance = d; fallback = feature }
+                }
             }
-            return best.map { [$0] } ?? []
+            if let best { return [best] }
+            if let fallback { return [fallback] }
+            return direct
         }
 
-        /// Distance entre le doigt et le TOIT présumé d'un bâtiment candidat.
-        private static func roofDistance(_ f: MLNFeature, from point: CGPoint,
-                                         on map: MLNMapView, lift: Double) -> CGFloat {
-            let ground = map.convert(f.coordinate, toPointTo: map)
-            let height = (f.attribute(forKey: "hauteur_mean") as? NSNumber)?.doubleValue ?? 6
-            let roof = CGPoint(x: ground.x, y: ground.y - CGFloat(height * lift))
-            return hypot(roof.x - point.x, roof.y - point.y)
+        /// L'emprise projetée à l'écran, remontée de la hauteur du bâtiment.
+        private static func roofPolygon(_ feature: MLNFeature, on map: MLNMapView,
+                                        lift: Double) -> [CGPoint] {
+            let polygon = (feature as? MLNPolygonFeature)
+                ?? (feature as? MLNMultiPolygonFeature)?.polygons.first
+            guard let polygon else { return [] }
+            let count = polygon.pointCount
+            guard count > 2 else { return [] }
+            var coordinates = [CLLocationCoordinate2D](
+                repeating: kCLLocationCoordinate2DInvalid, count: Int(count))
+            polygon.getCoordinates(&coordinates, range: NSRange(location: 0, length: Int(count)))
+            return coordinates.map { coordinate in
+                let ground = map.convert(coordinate, toPointTo: map)
+                return CGPoint(x: ground.x, y: ground.y - CGFloat(lift))
+            }
+        }
+
+        /// Lancer de rayon : le point est-il à l'intérieur du polygone ?
+        private static func contains(_ ring: [CGPoint], _ point: CGPoint) -> Bool {
+            var inside = false
+            var j = ring.count - 1
+            for i in ring.indices {
+                let a = ring[i], b = ring[j]
+                if (a.y > point.y) != (b.y > point.y),
+                   point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x {
+                    inside.toggle()
+                }
+                j = i
+            }
+            return inside
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let map, gesture.state == .ended else { return }
             let point = gesture.location(in: map)
-            let features = BuildingMap.Coordinator.hitTest(point, on: map)
+            let features = BuildingMap.Coordinator.hitTest(
+                point, on: map, aerial: aerialLayer?.isVisible == true)
             guard let feature = features.first,
                   let id = feature.attribute(forKey: "batiment_groupe_id") as? String
             else {

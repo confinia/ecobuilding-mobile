@@ -43,11 +43,23 @@ object MapIds {
     const val OUTLINE = "bdnb-selected-outline"
     const val AERIAL = "ign-ortho"
     const val PIN = "pin"
+    const val PARCELS = "ign-parcelles"
     const val TILES = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /** Photo aérienne IGN — Licence Ouverte, sans clé ni compte. */
     const val ORTHO = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
         "&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM" +
         "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg"
+
+    /**
+     * Limites de parcelles cadastrales — IGN, Licence Ouverte, sans clé.
+     *
+     * « Où s'arrêtent les terrains ? » est une des premières questions d'un
+     * acheteur, et la photo seule n'y répond pas. Tuiles PNG transparentes, à
+     * poser au-dessus de l'orthophoto.
+     */
+    const val PARCELLAIRE = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
+        "&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI%20vecteur&TILEMATRIXSET=PM" +
+        "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
 
     const val OPEN_ZOOM = 10.0
     const val WORK_ZOOM = 17.0
@@ -162,6 +174,11 @@ fun BuildingMap(
             // queryRenderedFeatures, et toucher un bâtiment en vue photo ne
             // sélectionnait plus rien — le geste même qu'on vient chercher ici.
             state.aerial = aerial
+            // Les limites ne s'affichent qu'AVEC la photo : sur le plan, elles
+            // parasiteraient une lecture qui porte sur les bâtiments.
+            map.style?.getLayer(MapIds.PARCELS)?.setProperties(
+                visibility(if (aerial) org.maplibre.android.style.layers.Property.VISIBLE
+                           else org.maplibre.android.style.layers.Property.NONE))
             val opacity = if (aerial) 0.01f else 0.9f
             map.style?.getLayer(MapIds.LAYER)?.setProperties(fillExtrusionOpacity(opacity))
             map.style?.getLayer(MapIds.SELECTED)
@@ -391,6 +408,14 @@ private fun installLayers(context: android.content.Context, style: Style) {
         TileSet("2.2.0", MapIds.ORTHO), 256))
     style.addLayer(RasterLayer(MapIds.AERIAL, MapIds.AERIAL + "-src").withProperties(
         visibility(org.maplibre.android.style.layers.Property.NONE)))
+
+    style.addSource(RasterSource(MapIds.PARCELS + "-src",
+        TileSet("2.2.0", MapIds.PARCELLAIRE), 256))
+    style.addLayer(RasterLayer(MapIds.PARCELS, MapIds.PARCELS + "-src").withProperties(
+        visibility(org.maplibre.android.style.layers.Property.NONE),
+        // Assez marqué pour se lire sur une toiture claire comme sur des
+        // arbres, sans masquer la photo qu'on est venu regarder.
+        rasterOpacity(0.85f)))
 
     style.addSource(VectorSource(MapIds.SOURCE, TileSet("2.2.0", MapIds.TILES).apply {
         minZoom = 14f
