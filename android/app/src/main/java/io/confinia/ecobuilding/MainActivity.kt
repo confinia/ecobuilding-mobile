@@ -51,6 +51,7 @@ private fun Screen() {
     var highlighted by remember { mutableStateOf<String?>(null) }
     var armed by remember { mutableStateOf<String?>(null) }
     var focus by remember { mutableStateOf<LatLng?>(null) }
+    var pin by remember { mutableStateOf<LatLng?>(null) }
     var aerial by remember { mutableStateOf(false) }
     var quota by remember { mutableStateOf<Quota?>(null) }
     var located by remember { mutableStateOf(UserLocation.granted(context)) }
@@ -81,10 +82,11 @@ private fun Screen() {
     Box(Modifier.fillMaxSize()) {
         BuildingMap(
             modifier = Modifier.fillMaxSize(),
-            aerial = aerial, showUser = located, highlighted = highlighted, focus = focus,
+            aerial = aerial, showUser = located, pin = pin,
+            highlighted = highlighted, focus = focus,
             onArmed = { armed = it },
             onSelect = { id, point ->
-                armed = null; highlighted = id; focus = null
+                armed = null; highlighted = id; focus = null; pin = point
                 target = Target.Building(id, point.longitude, point.latitude)
             })
 
@@ -136,6 +138,7 @@ private fun Screen() {
                             // liste qu'on venait de fermer.
                             search = ""; suggestions = emptyList()
                             focus = LatLng(s.lat, s.lon)
+                            pin = LatLng(s.lat, s.lon)
                             target = s.banId?.let { Target.Chosen(it, s.lon, s.lat, s.label) }
                                 ?: Target.FreeText(s.label)
                         })
@@ -152,8 +155,20 @@ private fun Screen() {
             }
         }
 
-        Text(versionLabel(context), fontSize = 10.sp, color = Color.Gray,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+        // Toucher la version copie l'identifiant d'installation. C'est ce que
+        // le bêta-testeur envoie pour être exempté de quota : sans ce geste, il
+        // faudrait le lui extraire de l'appareil, ce qu'aucun partenaire ne fera.
+        var copied by remember { mutableStateOf(false) }
+        Text(if (copied) "Identifiant copié" else versionLabel(context),
+            fontSize = 10.sp, color = Color.Gray,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp)
+                .clickable {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText(
+                        "EcoBuilding", InstallId.get(context)))
+                    copied = true
+                })
     }
 
     // Anti-rebond : une frappe ne doit pas déclencher une requête par lettre.
