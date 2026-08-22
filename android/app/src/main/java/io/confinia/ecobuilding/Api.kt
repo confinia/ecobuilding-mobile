@@ -91,14 +91,14 @@ object Api {
             val body = conn.inputStream.bufferedReader().use(BufferedReader::readText)
             // La clé est « suggestions ». Côté iPhone, l'avoir lue « results »
             // faisait échouer le décodage à chaque frappe, en silence.
-            val arr = json.parseToJsonElement(body).jsonObject["suggestions"]?.jsonArray
-                ?: JsonArray(emptyList())
-            arr.map { it.jsonObject }.map {
+            val arr = (json.parseToJsonElement(body) as? JsonObject)
+                ?.get("suggestions") as? JsonArray ?: JsonArray(emptyList())
+            arr.mapNotNull { it as? JsonObject }.map {
                 Suggestion(
-                    label = it["label"]?.jsonPrimitive?.content.orEmpty(),
-                    lon = it["lon"]?.jsonPrimitive?.double ?: 0.0,
-                    lat = it["lat"]?.jsonPrimitive?.double ?: 0.0,
-                    banId = it["ban_id"]?.jsonPrimitive?.contentOrNull,
+                    label = (it["label"] as? JsonPrimitive)?.contentOrNull.orEmpty(),
+                    lon = (it["lon"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
+                    lat = (it["lat"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
+                    banId = (it["ban_id"] as? JsonPrimitive)?.contentOrNull,
                 )
             }
         }
@@ -132,21 +132,21 @@ object Api {
                 if (line.isBlank()) continue
                 val obj = runCatching { json.parseToJsonElement(line).jsonObject }
                     .getOrNull() ?: continue
-                when (obj["type"]?.jsonPrimitive?.contentOrNull) {
+                when ((obj["type"] as? JsonPrimitive)?.contentOrNull) {
                     "core" -> emit(StreamEvent.Core(
-                        obj["query"]?.jsonObject ?: JsonObject(emptyMap()),
-                        obj["buildings"]?.jsonArray ?: JsonArray(emptyList())))
-                    "block" -> obj["name"]?.jsonPrimitive?.contentOrNull?.let {
+                        obj["query"] as? JsonObject ?: JsonObject(emptyMap()),
+                        obj["buildings"] as? JsonArray ?: JsonArray(emptyList())))
+                    "block" -> (obj["name"] as? JsonPrimitive)?.contentOrNull?.let {
                         emit(StreamEvent.Block(it, obj["value"] ?: JsonNull))
                     }
                     "done" -> emit(StreamEvent.Done(
-                        obj["query"]?.jsonObject ?: JsonObject(emptyMap()),
-                        obj["sources"]?.jsonArray?.mapNotNull {
-                            it.jsonPrimitive.contentOrNull
+                        obj["query"] as? JsonObject ?: JsonObject(emptyMap()),
+                        (obj["sources"] as? JsonArray)?.mapNotNull {
+                            (it as? JsonPrimitive)?.contentOrNull
                         } ?: emptyList()))
                     "error" -> emit(StreamEvent.Failure(
-                        obj["status"]?.jsonPrimitive?.intOrNull ?: 0,
-                        obj["detail"]?.jsonPrimitive?.contentOrNull.orEmpty()))
+                        (obj["status"] as? JsonPrimitive)?.intOrNull ?: 0,
+                        (obj["detail"] as? JsonPrimitive)?.contentOrNull.orEmpty()))
                 }
             }
         }
@@ -157,17 +157,18 @@ object Api {
     suspend fun quota(context: Context): Quota = withIo {
         val body = open(context, "quota").inputStream.bufferedReader()
             .use(BufferedReader::readText)
-        val o = json.parseToJsonElement(body).jsonObject
+        val o = json.parseToJsonElement(body) as? JsonObject ?: JsonObject(emptyMap())
+        fun p(key: String) = o[key] as? JsonPrimitive
         Quota(
-            plan = o["plan"]?.jsonPrimitive?.content.orEmpty(),
-            reportsUsed = o["reports_used"]?.jsonPrimitive?.intOrNull ?: 0,
-            reportsIncluded = o["reports_included"]?.jsonPrimitive?.intOrNull,
-            reportsLeft = o["reports_left"]?.jsonPrimitive?.intOrNull,
-            units = o["units"]?.jsonPrimitive?.intOrNull ?: 0,
-            period = o["period"]?.jsonPrimitive?.contentOrNull,
-            resetsAt = o["resets_at"]?.jsonPrimitive?.contentOrNull,
-            freeAgain = o["free_again"]?.jsonArray?.mapNotNull {
-                it.jsonPrimitive.contentOrNull
+            plan = p("plan")?.contentOrNull.orEmpty(),
+            reportsUsed = p("reports_used")?.intOrNull ?: 0,
+            reportsIncluded = p("reports_included")?.intOrNull,
+            reportsLeft = p("reports_left")?.intOrNull,
+            units = p("units")?.intOrNull ?: 0,
+            period = p("period")?.contentOrNull,
+            resetsAt = p("resets_at")?.contentOrNull,
+            freeAgain = (o["free_again"] as? JsonArray)?.mapNotNull {
+                (it as? JsonPrimitive)?.contentOrNull
             } ?: emptyList(),
         )
     }

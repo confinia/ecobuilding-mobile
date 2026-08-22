@@ -43,7 +43,7 @@ class BuildingModel {
     var lon: Double? = null
     var lat: Double? = null
 
-    val buildingId: String? get() = building?.get("bdnb_id")?.jsonPrimitive?.contentOrNull
+    val buildingId: String? get() = (building?.get("bdnb_id") as? JsonPrimitive)?.contentOrNull
 
     companion object {
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
@@ -69,8 +69,8 @@ class BuildingModel {
             flow.collect { event ->
                 when (event) {
                     is StreamEvent.Core -> {
-                        address = event.query["address"]?.jsonPrimitive?.contentOrNull ?: address
-                        building = event.buildings.firstOrNull()?.jsonObject
+                        address = (event.query["address"] as? JsonPrimitive)?.contentOrNull ?: address
+                        building = event.buildings.firstOrNull() as? JsonObject
                         buildingId?.let(onResolved)
                     }
                     is StreamEvent.Block -> {
@@ -78,7 +78,7 @@ class BuildingModel {
                         pending.value = pending.value - event.name
                     }
                     is StreamEvent.Done -> {
-                        address = event.query["address"]?.jsonPrimitive?.contentOrNull ?: address
+                        address = (event.query["address"] as? JsonPrimitive)?.contentOrNull ?: address
                         pending.value = emptySet()
                     }
                     is StreamEvent.Failure -> {
@@ -97,11 +97,25 @@ class BuildingModel {
     }
 }
 
+/*
+ * Accès TOLÉRANTS au JSON.
+ *
+ * Une source ouverte sur neuf renvoie régulièrement `null` : pas de DPE
+ * officiel publié, pas de vente récente dans la commune, pas de réseau d'eau
+ * renseigné. Le bloc arrive alors comme `JsonNull`, et `.jsonObject` lève une
+ * exception — l'application entière tombait sur un bâtiment banal.
+ *
+ * D'où `as?` partout : une donnée absente doit faire disparaître une ligne, pas
+ * l'écran.
+ */
+private fun JsonElement?.obj(key: String): JsonElement? =
+    (this as? JsonObject)?.get(key)
+
 private fun JsonElement?.str(key: String): String? =
-    this?.jsonObject?.get(key)?.jsonPrimitive?.contentOrNull
+    (this.obj(key) as? JsonPrimitive)?.contentOrNull
 
 private fun JsonElement?.num(key: String): Double? =
-    this?.jsonObject?.get(key)?.jsonPrimitive?.doubleOrNull
+    (this.obj(key) as? JsonPrimitive)?.doubleOrNull
 
 private fun dpeColor(cls: String?) = when (cls) {
     "A" -> Color(0f, 0.56f, 0.21f); "B" -> Color(0.32f, 0.69f, 0.33f)
@@ -113,7 +127,12 @@ private fun dpeColor(cls: String?) = when (cls) {
 @Composable
 fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                   onQuotaChanged: (Quota?) -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
+    // Hauteur BORNÉE, sinon le poids ne veut rien dire : la feuille mesurait son
+    // contenu sans contrainte, la zone défilante prenait toute la place et le
+    // bouton PDF tombait hors de l'écran — le défaut déjà corrigé sur iPhone,
+    // reproduit ici parce qu'Android mesure autrement.
+    val maxHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
+    Column(Modifier.fillMaxWidth().heightIn(max = maxHeight * 0.88f)) {
         Column(
             Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -195,15 +214,15 @@ fun quotaLine(q: Quota?, building: String?): String? {
     if (q == null) return null
     if (building != null && building in q.freeAgain)
         return "Déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
-    val left = q.reportsLeft ?: return null
+    val total = q.reportsIncluded ?: return null
     val whenTxt = when (q.period) { "month" -> "ce mois-ci"; "day" -> "aujourd'hui"; else -> "" }
-    val total = q.reportsIncluded?.toString() ?: "?"
-    var text = if (left == 0) {
-        "Limite atteinte : ${q.reportsUsed} bâtiments sur $total $whenTxt" +
-            (reopensIn(q.resetsAt)?.let { " — elle repart $it" } ?: "")
+    // CONSOMMATION, et non solde restant : « 10 bâtiments restants sur 10 » se
+    // lisait comme un compteur déjà plein, et alarmait avant le premier usage.
+    // Un compteur qui part de zéro et monte se comprend d'un coup d'œil.
+    var text = if (q.reportsLeft == 0) {
+        "$total/$total" + (reopensIn(q.resetsAt)?.let { " — la limite repart $it" } ?: "")
     } else {
-        val suffix = if (whenTxt.isEmpty()) " sur $total" else " $whenTxt sur $total"
-        if (left > 1) "$left bâtiments restants$suffix" else "1 bâtiment restant$suffix"
+        "${q.reportsUsed}/$total fiches" + if (whenTxt.isEmpty()) "" else " $whenTxt"
     }
     if (q.units > 0) text += " · ${q.units} à l'unité"
     return text
@@ -246,7 +265,7 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
                 }
             }
         }
-        energy?.jsonObject?.get("rental_ban").str("rental_ban_date")?.let {
+        energy.obj("rental_ban").str("rental_ban_date")?.let {
             Text("⚠ Location interdite à partir de ${it.take(4)} (loi Climat et Résilience)",
                 color = Color(0.9f, 0.5f, 0.1f), fontSize = 14.sp)
         }
@@ -266,15 +285,20 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
     }
 }
 
-/** Une valeur absente disparaît : une fiche pleine de tirets paraît vide. */
+/**
+ * Une valeur absente disparaît : une fiche pleine de tirets paraît vide. Et
+ * « INDETERMINE », que la BDNB renvoie tel quel, n'apprend rien à personne.
+ */
 @Composable
 private fun Row(label: String, value: String?) {
-    if (value != null) {
-        Row(Modifier.fillMaxWidth()) {
-            Text(label, color = Color.Gray, fontSize = 14.sp)
-            Spacer(Modifier.weight(1f))
-            Text(value, fontSize = 14.sp)
-        }
+    if (value == null || value.trim().uppercase().startsWith("INDETERMINE")) return
+    // Écart GARANTI entre l'intitulé et la valeur : avec un simple ressort, une
+    // valeur qui passe à la ligne le comprimait à zéro et le texte se collait à
+    // son intitulé (« NaturelsInondation, Séisme… »).
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(label, color = Color.Gray, fontSize = 14.sp)
+        Text(value, fontSize = 14.sp, modifier = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End)
     }
 }
 
@@ -324,14 +348,14 @@ private fun EnvironmentSection(groundwater: JsonElement?, solar: JsonElement?, w
 
 @Composable
 private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, prices: JsonElement?) {
-    val medians = prices?.jsonObject?.get("commune_eur_m2")?.jsonObject ?: JsonObject(emptyMap())
+    val medians = prices.obj("commune_eur_m2") as? JsonObject ?: JsonObject(emptyMap())
     val nbSchools = (schools as? JsonArray)?.size ?: 0
     val tax = taxes.num("property_tax_built_pct")
     if (medians.isEmpty() && nbSchools == 0 && tax == null) return
     Section("Quartier") {
         medians.keys.sorted().forEach { k ->
             Row("Médiane ${k.lowercase()}",
-                medians[k].num("median")?.toInt()?.let { "$it €/m²" })
+                (medians[k] as JsonElement?).num("median")?.toInt()?.let { "$it €/m²" })
         }
         Row("Taxe foncière (bâti)", tax?.let { fmt("%.2f %%", it) })
         Row("Ordures ménagères", taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
@@ -344,7 +368,8 @@ private fun fmt(pattern: String, value: Double): String =
     String.format(java.util.Locale.FRANCE, pattern, value)
 
 private fun JsonElement?.strings(key: String): List<String> =
-    (this?.jsonObject?.get(key) as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }
+    (this.obj(key) as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
         ?: emptyList()
 
-private fun String.capitalize(): String = replaceFirstChar { it.uppercase() }
+private fun String.capitalize(): String =
+    lowercase().replaceFirstChar { it.uppercase() }

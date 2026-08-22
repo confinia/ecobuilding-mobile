@@ -93,7 +93,8 @@ private fun Screen() {
         // Bascule plan / photo, SOUS la recherche et masquée pendant la saisie :
         // elle recouvrait la suggestion la plus probable.
         if (suggestions.isEmpty()) {
-            Box(Modifier.align(Alignment.TopEnd).padding(top = 84.dp, end = 12.dp)) {
+            Box(Modifier.align(Alignment.TopEnd).statusBarsPadding()
+                .padding(top = 84.dp, end = 12.dp)) {
                 FilledTonalIconButton(onClick = { aerial = !aerial },
                     modifier = Modifier.size(44.dp).clip(CircleShape)) {
                     Icon(if (aerial) Icons.Filled.Map else Icons.Filled.Public,
@@ -103,7 +104,9 @@ private fun Screen() {
             }
         }
 
-        Column(Modifier.align(Alignment.TopCenter).padding(12.dp)) {
+        // Sans ces marges, le champ passait SOUS la barre d'état : l'heure
+        // traversait le texte saisi.
+        Column(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp)) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it },
                 placeholder = { Text("Adresse en France…") },
@@ -148,7 +151,8 @@ private fun Screen() {
 
         // Sans ce mot, le premier appui paraît sans effet.
         if (armed != null) {
-            Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp),
+            Surface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                .padding(bottom = 40.dp),
                 shape = MaterialTheme.shapes.extraLarge, tonalElevation = 4.dp) {
                 Text("Touchez à nouveau ce bâtiment pour voir sa fiche",
                     Modifier.padding(horizontal = 16.dp, vertical = 10.dp), fontSize = 14.sp)
@@ -161,7 +165,8 @@ private fun Screen() {
         var copied by remember { mutableStateOf(false) }
         Text(if (copied) "Identifiant copié" else versionLabel(context),
             fontSize = 10.sp, color = Color.Gray,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp)
+            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
+                .padding(12.dp)
                 .clickable {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
                         as android.content.ClipboardManager
@@ -179,7 +184,11 @@ private fun Screen() {
     }
 
     if (target != null) {
-        ModalBottomSheet(onDismissRequest = { target = null }) {
+        // Ouverture pleine hauteur : à mi-hauteur, Android place le contenu sous
+        // le pli et le bouton PDF n'est atteignable qu'après avoir tiré la
+        // feuille. C'est l'objet vendu : il doit être là d'emblée.
+        ModalBottomSheet(onDismissRequest = { target = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             BuildingSheet(model, quota, onClose = { target = null },
                 onQuotaChanged = { quota = it })
         }
