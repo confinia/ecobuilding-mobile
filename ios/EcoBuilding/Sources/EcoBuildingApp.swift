@@ -154,6 +154,26 @@ struct ContentView: View {
             })
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                // La carte reste MANIPULABLE tant que la fiche est à
+                // mi-hauteur : on lit la fiche, on veut voir ce qu'il y a juste
+                // à côté, on pousse la carte du doigt. Sans cela il fallait
+                // refermer, se déplacer, rouvrir. Tirée en grand, la fiche
+                // redevient modale.
+                .modifier(BackgroundInteraction())
+        }
+    }
+}
+
+
+/// `presentationBackgroundInteraction` n'existe qu'à partir d'iOS 16.4, or nous
+/// ciblons iOS 16.0 pour couvrir l'iPhone 8. Les appareils plus anciens gardent
+/// le comportement actuel — pas de régression, simplement pas le confort.
+private struct BackgroundInteraction: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 16.4, *) {
+            content.presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        } else {
+            content
         }
     }
 }

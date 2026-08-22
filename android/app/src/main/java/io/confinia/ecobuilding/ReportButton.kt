@@ -1,7 +1,5 @@
 package io.confinia.ecobuilding
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
@@ -15,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -34,7 +31,8 @@ import java.io.File
  * serait une fiction : un rendu serveur unique n'expose aucune progression.
  */
 @Composable
-fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -> Unit) {
+fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -> Unit,
+                 onReport: (File) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
@@ -55,7 +53,7 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
                 scope.launch {
                     try {
                         val file = Api.report(context, id, model.lon, model.lat)
-                        openPdf(context, file)
+                        onReport(file)
                         onQuotaChanged(runCatching { Api.quota(context) }.getOrNull())
                     } catch (e: ReportError) {
                         // Le serveur sait pourquoi il refuse (limite atteinte,
@@ -103,30 +101,4 @@ private fun stageLabel(elapsed: Int): String = when {
     elapsed < 3 -> "Collecte des données…"
     elapsed < 12 -> "Rendu de la carte 3D…"
     else -> "Mise en page…"
-}
-
-/**
- * Ouvre la fiche dans le lecteur PDF du téléphone.
- *
- * Le fichier passe par un FileProvider : depuis Android 7, transmettre un
- * `file://` à une autre application lève une exception. Et sans lecteur PDF
- * installé — c'est le cas d'origine sur beaucoup d'appareils — on propose le
- * partage, qui permet au moins d'envoyer ou d'enregistrer la fiche plutôt que
- * de laisser l'utilisateur devant un échec muet.
- */
-private fun openPdf(context: Context, file: File) {
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-    val view = Intent(Intent.ACTION_VIEW)
-        .setDataAndType(uri, "application/pdf")
-        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (view.resolveActivity(context.packageManager) != null) {
-        context.startActivity(view)
-        return
-    }
-    val share = Intent(Intent.ACTION_SEND)
-        .setType("application/pdf")
-        .putExtra(Intent.EXTRA_STREAM, uri)
-        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    context.startActivity(Intent.createChooser(share, "Ouvrir la fiche PDF")
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }

@@ -54,3 +54,31 @@ targets:
         # revue Apple — il doit dire l'usage réel, pas une formule creuse.
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: >-
           Pour afficher les bâtiments autour de vous et vous situer sur la carte.
+
+  # Pilotage de l'app pour les essais de bout en bout. `simctl` sait lancer,
+  # poser une position et capturer l'écran, mais ne sait pas TOUCHER : sans
+  # cette cible, aucun parcours utilisateur ne peut être rejoué sur iPhone.
+  # Elle tourne aussi bien sur simulateur que sur un appareil réel.
+  EcoBuildingUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: EcoBuilding/UITests
+    dependencies:
+      - target: EcoBuilding
+    settings:
+      base:
+        DEVELOPMENT_TEAM: "38WRV3R7D5"
+        PRODUCT_BUNDLE_IDENTIFIER: io.confinia.ecobuilding.uitests
+        SWIFT_VERSION: "5.0"
+        TEST_TARGET_NAME: EcoBuilding
+
+schemes:
+  EcoBuilding:
+    build:
+      targets:
+        EcoBuilding: all
+        EcoBuildingUITests: [test]
+    test:
+      targets:
+        - EcoBuildingUITests
