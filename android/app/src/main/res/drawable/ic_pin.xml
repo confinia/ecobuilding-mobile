@@ -1,0 +1,11 @@
+<!-- Épingle : un repère qui survit au changement de fond et au zoom. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp" android:height="48dp"
+    android:viewportWidth="24" android:viewportHeight="32">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M12,0C5.9,0 1,4.9 1,11c0,8.2 11,21 11,21s11,-12.8 11,-21C23,4.9 18.1,0 12,0z" />
+    <path android:fillColor="#2C7A4A"
+        android:pathData="M12,1.6C6.8,1.6 2.6,5.8 2.6,11c0,7.2 9.4,18.6 9.4,18.6s9.4,-11.4 9.4,-18.6C21.4,5.8 17.2,1.6 12,1.6z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M12,7a4,4 0,1 0,0.001 8A4,4 0,0 0,12 7z" />
+</vector>

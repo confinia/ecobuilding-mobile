@@ -42,6 +42,7 @@ object MapIds {
     const val SELECTED = "bdnb-selected"
     const val OUTLINE = "bdnb-selected-outline"
     const val AERIAL = "ign-ortho"
+    const val PIN = "pin"
     const val TILES = "https://ecobuilding.confinia.io/api/v1/tiles/batiment_groupe/{z}/{x}/{y}.pbf"
     /** Photo aérienne IGN — Licence Ouverte, sans clé ni compte. */
     const val ORTHO = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
@@ -79,6 +80,7 @@ fun BuildingMap(
     modifier: Modifier = Modifier,
     aerial: Boolean,
     showUser: Boolean,
+    pin: LatLng?,
     highlighted: String?,
     focus: LatLng?,
     onArmed: (String?) -> Unit,
@@ -121,7 +123,7 @@ fun BuildingMap(
                 getMapAsync { map ->
                     state.map = map
                     map.setStyle(Style.Builder().fromUri("https://tiles.openfreemap.org/styles/liberty")) { style ->
-                        installLayers(style, state)
+                        installLayers(ctx, style)
                         state.applyHighlight(highlighted)
                     }
                     map.cameraPosition = CameraPosition.Builder()
@@ -150,6 +152,10 @@ fun BuildingMap(
             if (showUser && !state.userDotOn) {
                 map.style?.let { style -> state.enableUserDot(view.context, map, style) }
             }
+            if (pin != state.lastPin) {
+                state.lastPin = pin
+                state.movePin(map, pin)
+            }
             if (state.lastHighlighted != highlighted) {
                 state.lastHighlighted = highlighted
                 state.applyHighlight(highlighted)
@@ -168,6 +174,7 @@ private class MapState {
     var view: MapView? = null
     var lastHighlighted: String? = null
     var lastFocus: LatLng? = null
+    var lastPin: LatLng? = null
     var userDotOn = false
     /** Bâtiment désigné par le premier appui, en attente de confirmation. */
     private var armed: String? = null
@@ -188,6 +195,18 @@ private class MapState {
                 cameraMode = org.maplibre.android.location.modes.CameraMode.NONE
             }
             userDotOn = true
+        }
+    }
+
+    /** Déplace l'épingle, ou la retire quand plus rien n'est visé. */
+    fun movePin(map: MapLibreMap, point: LatLng?) {
+        val source = map.style?.getSourceAs<org.maplibre.android.style.sources.GeoJsonSource>(
+            MapIds.PIN + "-src") ?: return
+        if (point == null) {
+            source.setGeoJson(org.maplibre.geojson.FeatureCollection.fromFeatures(emptyList()))
+        } else {
+            source.setGeoJson(org.maplibre.geojson.Feature.fromGeometry(
+                org.maplibre.geojson.Point.fromLngLat(point.longitude, point.latitude)))
         }
     }
 
@@ -276,7 +295,7 @@ private class MapState {
     }
 }
 
-private fun installLayers(style: Style, state: MapState) {
+private fun installLayers(context: android.content.Context, style: Style) {
     // Le fond porte ses propres bâtiments OSM, qui ne s'alignent pas sur les
     // emprises BDNB : deux volumes superposés et décalés.
     style.layers.filter { it.id.contains("building", ignoreCase = true) }
@@ -318,6 +337,16 @@ private fun installLayers(style: Style, state: MapState) {
             fillExtrusionOpacity(1.0f))
     })
 
+    // Épingle : au-dessus de tout, sans jamais disparaître pour cause de
+    // chevauchement — c'est elle qui répond à « lequel ai-je sélectionné ? ».
+    pinBitmap(context)?.let { style.addImage(MapIds.PIN, it) }
+    style.addSource(org.maplibre.android.style.sources.GeoJsonSource(MapIds.PIN + "-src"))
+    style.addLayer(org.maplibre.android.style.layers.SymbolLayer(
+        MapIds.PIN, MapIds.PIN + "-src").withProperties(
+            iconImage(MapIds.PIN),
+            iconAnchor(org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM),
+            iconAllowOverlap(true), iconIgnorePlacement(true)))
+
     // Contour au sol : visible dans les deux modes, et il ne masque rien.
     style.addLayer(LineLayer(MapIds.OUTLINE, MapIds.SOURCE).apply {
         sourceLayer = "sql_statement"
@@ -325,4 +354,18 @@ private fun installLayers(style: Style, state: MapState) {
         setFilter(eq(get("batiment_groupe_id"), literal("")))
         withProperties(lineColor(Color.rgb(0, 122, 255)), lineWidth(3f), lineOpacity(0.95f))
     })
+}
+
+/** Le vecteur devient une image : MapLibre ne prend que des bitmaps. */
+private fun pinBitmap(context: android.content.Context): android.graphics.Bitmap? {
+    val drawable = androidx.core.content.ContextCompat
+        .getDrawable(context, R.drawable.ic_pin) ?: return null
+    val density = context.resources.displayMetrics.density
+    val width = (24 * density).toInt().coerceAtLeast(1)
+    val height = (32 * density).toInt().coerceAtLeast(1)
+    val bitmap = android.graphics.Bitmap.createBitmap(
+        width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    drawable.setBounds(0, 0, width, height)
+    drawable.draw(android.graphics.Canvas(bitmap))
+    return bitmap
 }
