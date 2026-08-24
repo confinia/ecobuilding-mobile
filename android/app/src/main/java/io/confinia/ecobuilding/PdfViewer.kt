@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -62,7 +63,7 @@ fun PdfViewer(file: File, onClose: () -> Unit) {
             // Une CROIX, pas le mot « Fermer » : c'est le geste le plus fréquent
             // une fois la fiche lue.
             IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = "Fermer la fiche",
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.sheet_close),
                     tint = Color.White)
             }
             Spacer(Modifier.weight(1f))
@@ -70,7 +71,7 @@ fun PdfViewer(file: File, onClose: () -> Unit) {
             // client ou de l'enregistrer, sans obliger à passer par là pour la
             // simple lecture.
             IconButton(onClick = { share(context, file) }) {
-                Icon(Icons.Filled.Share, contentDescription = "Partager la fiche",
+                Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.report_share),
                     tint = Color.White)
             }
         }
@@ -78,7 +79,7 @@ fun PdfViewer(file: File, onClose: () -> Unit) {
         val pages = document.pageCount
         if (pages == 0) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("La fiche n'a pas pu être ouverte.", color = Color.Gray)
+                Text(stringResource(R.string.report_unreadable), color = Color.Gray)
             }
             return@Column
         }
@@ -102,7 +103,7 @@ fun PdfViewer(file: File, onClose: () -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) {
                     bitmap?.let {
-                        Image(it.asImageBitmap(), contentDescription = "Page ${index + 1}",
+                        Image(it.asImageBitmap(), contentDescription = stringResource(R.string.report_page, index + 1),
                             modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     } ?: CircularProgressIndicator()
                 }
@@ -175,5 +176,5 @@ private fun share(context: Context, file: File) {
         .setType("application/pdf")
         .putExtra(Intent.EXTRA_STREAM, uri)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    context.startActivity(Intent.createChooser(intent, "Partager la fiche PDF"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.report_share_title)))
 }
