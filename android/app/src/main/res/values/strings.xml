@@ -1,3 +1,118 @@
 <resources>
     <string name="app_name">EcoBuilding</string>
+
+    <!-- Carte -->
+    <string name="search_hint">Adresse en France…</string>
+    <string name="search_action">Rechercher</string>
+    <string name="search_clear">Effacer</string>
+    <string name="show_aerial">Afficher la photo aérienne</string>
+    <string name="show_plan">Afficher le plan</string>
+    <string name="tap_again">Touchez à nouveau ce bâtiment pour voir sa fiche</string>
+    <string name="id_copied">Identifiant copié</string>
+
+    <!-- Fiche -->
+    <string name="sheet_close">Fermer la fiche</string>
+    <string name="sheet_fallback_title">Bâtiment</string>
+    <string name="main_address">Adresse principale du bâtiment : %1$s</string>
+    <string name="pending_prefix">Encore en cours : </string>
+    <string name="no_sheet">Pas de fiche pour ce bâtiment.</string>
+    <string name="data_unavailable">Données momentanément indisponibles.</string>
+
+    <!-- Énergie. « DPE » reste en français : c'est le nom du diagnostic
+         français, et le lecteur le retrouvera sur les actes notariés. -->
+    <string name="section_energy">Énergie</string>
+    <string name="dpe_class">Classe DPE %1$s</string>
+    <string name="dpe_missing">DPE non renseigné</string>
+    <string name="dpe_none_published">Aucun diagnostic publié pour ce bâtiment</string>
+    <string name="rental_ban">⚠ Location interdite à partir de %1$s (loi Climat et Résilience)</string>
+    <string name="ghg">GES</string>
+    <string name="dpe_date">Date du DPE</string>
+    <string name="dpe_number">N° DPE officiel</string>
+    <string name="living_area">Surface habitable</string>
+    <string name="annual_cost">Coût annuel d\'énergie</string>
+
+    <!-- Bâtiment -->
+    <string name="section_building">Bâtiment</string>
+    <string name="build_year">Année de construction</string>
+    <string name="height">Hauteur</string>
+    <string name="levels">Niveaux</string>
+    <string name="single_storey">1 — de plain-pied</string>
+    <string name="dwellings">Logements</string>
+    <string name="walls">Murs</string>
+    <string name="roof">Toiture</string>
+
+    <!-- Risques -->
+    <string name="section_risks">Risques (Géorisques)</string>
+    <string name="risks_natural">Naturels</string>
+    <string name="risks_techno">Technologiques</string>
+    <string name="clay_hazard">Aléa retrait-gonflement</string>
+
+    <!-- Environnement et quartier -->
+    <string name="section_environment">Environnement</string>
+    <string name="groundwater">Nappe phréatique</string>
+    <string name="solar">Potentiel solaire</string>
+    <string name="water_efficiency">Rendement du réseau d\'eau</string>
+    <string name="water_price">Prix de l\'eau</string>
+    <string name="section_area">Quartier</string>
+    <string name="median_price">Prix médian (%1$s)</string>
+    <string name="property_tax">Taxe foncière (bâti)</string>
+    <string name="waste_tax">Ordures ménagères</string>
+    <string name="schools">Écoles à proximité</string>
+
+    <!-- Identifiants -->
+    <string name="section_ids">Identifiants</string>
+    <string name="id_rnb">ID-RNB</string>
+    <string name="id_bdnb">ID BDNB</string>
+
+    <!-- Fiche PDF -->
+    <string name="get_report">Obtenir la fiche PDF</string>
+    <string name="stage_collect">Collecte des données…</string>
+    <string name="stage_render">Rendu de la carte 3D…</string>
+    <string name="stage_layout">Mise en page…</string>
+    <string name="report_failed">La fiche n\'a pas pu être générée. Réessayez.</string>
+    <string name="report_unreadable">La fiche n\'a pas pu être ouverte.</string>
+    <string name="report_share">Partager la fiche</string>
+    <string name="report_share_title">Partager la fiche PDF</string>
+    <string name="report_page">Page %1$d</string>
+    <string name="quota_cached">Fiche déjà obtenue aujourd\'hui — nouveau téléchargement gratuit</string>
+    <string name="quota_used">%1$d/%2$d fiches</string>
+    <string name="quota_today">aujourd\'hui</string>
+    <string name="quota_month">ce mois-ci</string>
+    <string name="quota_full">%1$d/%1$d</string>
+    <string name="quota_reopens"> — la limite repart %1$s</string>
+    <string name="quota_units"> · %1$d à l\'unité</string>
+    <string name="in_hours">dans %1$d heure</string>
+    <string name="in_hours_plural">dans %1$d heures</string>
+    <string name="in_minutes">dans %1$d minute</string>
+    <string name="in_minutes_plural">dans %1$d minutes</string>
+
+    <!-- Blocs en attente -->
+    <string name="block_risks">Risques</string>
+    <string name="block_groundwater">Nappe phréatique</string>
+    <string name="block_solar">Solaire</string>
+    <string name="block_water">Eau potable</string>
+    <string name="block_dpe">DPE officiel</string>
+    <string name="block_taxes">Fiscalité locale</string>
+    <string name="block_schools">Écoles</string>
+    <string name="block_prices">Prix de vente</string>
+    <string name="block_rnb">ID-RNB</string>
+
+    <!-- Noms de risques Géorisques, traduits depuis la CLÉ MACHINE
+         (`inondation`, `seisme`) et non depuis le français affiché :
+         c'est ce qui les rend localisables. -->
+    <string name="risk_inondation">Inondation</string>
+    <string name="risk_remonteeNappe">Remontée de nappe</string>
+    <string name="risk_seisme">Séisme</string>
+    <string name="risk_mouvementTerrain">Mouvement de terrain</string>
+    <string name="risk_retraitGonflementArgile">Retrait-gonflement des argiles</string>
+    <string name="risk_feuForet">Feu de forêt</string>
+    <string name="risk_radon">Radon</string>
+    <string name="risk_icpe">ICPE</string>
+    <string name="risk_pollutionSols">Pollution des sols</string>
+    <string name="risk_nucleaire">Nucléaire</string>
+    <string name="risk_ruptureBarrage">Rupture de barrage</string>
+    <string name="risk_risqueMinier">Risque minier</string>
+    <string name="risk_cavite">Cavité souterraine</string>
+    <string name="risk_avalanche">Avalanche</string>
+    <string name="risk_canalisationsMatieresDangereuses">Canalisations (matières dangereuses)</string>
 </resources>

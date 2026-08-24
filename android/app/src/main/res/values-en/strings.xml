@@ -1,0 +1,111 @@
+<resources>
+    <!-- Les termes administratifs FRANÇAIS sont conservés, avec une glose
+         anglaise : un DPE n'est pas un EPC britannique (méthode, échelle et
+         portée juridique diffèrent), et la taxe foncière n'est pas la council
+         tax. Le lecteur apprend le mot qu'il verra sur l'acte notarié — c'est
+         un service rendu, pas une gêne. -->
+    <string name="search_hint">Address in France…</string>
+    <string name="search_action">Search</string>
+    <string name="search_clear">Clear</string>
+    <string name="show_aerial">Show aerial photo</string>
+    <string name="show_plan">Show map</string>
+    <string name="tap_again">Tap this building again to see its report</string>
+    <string name="id_copied">Identifier copied</string>
+
+    <string name="sheet_close">Close report</string>
+    <string name="sheet_fallback_title">Building</string>
+    <string name="main_address">Building\'s main address: %1$s</string>
+    <string name="pending_prefix">Still loading: </string>
+    <string name="no_sheet">No data for this building.</string>
+    <string name="data_unavailable">Data temporarily unavailable.</string>
+
+    <string name="section_energy">Energy</string>
+    <string name="dpe_class">Energy rating (DPE) %1$s</string>
+    <string name="dpe_missing">No energy rating (DPE)</string>
+    <string name="dpe_none_published">No survey published for this building</string>
+    <string name="rental_ban">⚠ Letting banned from %1$s (French Climate and Resilience Act)</string>
+    <string name="ghg">Greenhouse gas</string>
+    <string name="dpe_date">Survey date</string>
+    <string name="dpe_number">Official DPE number</string>
+    <string name="living_area">Living area</string>
+    <string name="annual_cost">Estimated yearly energy cost</string>
+
+    <string name="section_building">Building</string>
+    <string name="build_year">Year built</string>
+    <string name="height">Height</string>
+    <string name="levels">Storeys</string>
+    <string name="single_storey">1 — single storey</string>
+    <string name="dwellings">Dwellings</string>
+    <string name="walls">Walls</string>
+    <string name="roof">Roof</string>
+
+    <string name="section_risks">Hazards (Géorisques)</string>
+    <string name="risks_natural">Natural</string>
+    <string name="risks_techno">Industrial</string>
+    <string name="clay_hazard">Clay shrink-swell hazard</string>
+
+    <string name="section_environment">Environment</string>
+    <string name="groundwater">Groundwater depth</string>
+    <string name="solar">Solar potential</string>
+    <string name="water_efficiency">Water network efficiency</string>
+    <string name="water_price">Water price</string>
+    <string name="section_area">Neighbourhood</string>
+    <string name="median_price">Median price (%1$s)</string>
+    <string name="property_tax">Property tax (taxe foncière)</string>
+    <string name="waste_tax">Household waste tax</string>
+    <string name="schools">Schools nearby</string>
+
+    <string name="section_ids">Identifiers</string>
+    <string name="id_rnb">RNB ID</string>
+    <string name="id_bdnb">BDNB ID</string>
+
+    <string name="get_report">Get the PDF report</string>
+    <string name="stage_collect">Gathering data…</string>
+    <string name="stage_render">Rendering the 3D map…</string>
+    <string name="stage_layout">Laying out…</string>
+    <string name="report_failed">The report could not be generated. Please try again.</string>
+    <string name="report_unreadable">The report could not be opened.</string>
+    <string name="report_share">Share the report</string>
+    <string name="report_share_title">Share the PDF report</string>
+    <string name="report_page">Page %1$d</string>
+    <string name="quota_cached">Already downloaded today — free to download again</string>
+    <string name="quota_used">%1$d/%2$d reports</string>
+    <string name="quota_today">today</string>
+    <string name="quota_month">this month</string>
+    <string name="quota_full">%1$d/%1$d</string>
+    <string name="quota_reopens"> — the limit resets %1$s</string>
+    <string name="quota_units"> · %1$d single reports</string>
+    <string name="in_hours">in %1$d hour</string>
+    <string name="in_hours_plural">in %1$d hours</string>
+    <string name="in_minutes">in %1$d minute</string>
+    <string name="in_minutes_plural">in %1$d minutes</string>
+
+    <string name="block_risks">Hazards</string>
+    <string name="block_groundwater">Groundwater</string>
+    <string name="block_solar">Solar</string>
+    <string name="block_water">Drinking water</string>
+    <string name="block_dpe">Official DPE</string>
+    <string name="block_taxes">Local taxes</string>
+    <string name="block_schools">Schools</string>
+    <string name="block_prices">Sale prices</string>
+    <string name="block_rnb">RNB ID</string>
+
+    <!-- Noms de risques Géorisques, traduits depuis la CLÉ MACHINE
+         (`inondation`, `seisme`) et non depuis le français affiché :
+         c'est ce qui les rend localisables. -->
+    <string name="risk_inondation">Flooding</string>
+    <string name="risk_remonteeNappe">Rising groundwater</string>
+    <string name="risk_seisme">Earthquake</string>
+    <string name="risk_mouvementTerrain">Ground movement</string>
+    <string name="risk_retraitGonflementArgile">Clay shrink-swell</string>
+    <string name="risk_feuForet">Wildfire</string>
+    <string name="risk_radon">Radon</string>
+    <string name="risk_icpe">Classified industrial site (ICPE)</string>
+    <string name="risk_pollutionSols">Soil pollution</string>
+    <string name="risk_nucleaire">Nuclear</string>
+    <string name="risk_ruptureBarrage">Dam failure</string>
+    <string name="risk_risqueMinier">Mining subsidence</string>
+    <string name="risk_cavite">Underground cavity</string>
+    <string name="risk_avalanche">Avalanche</string>
+    <string name="risk_canalisationsMatieresDangereuses">Hazardous material pipelines</string>
+</resources>

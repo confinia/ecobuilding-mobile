@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,11 +49,18 @@ class BuildingModel {
     companion object {
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
             "official_dpe", "local_taxes", "schools", "prices", "rnb")
+        /** Libellés des sources encore attendues, par identifiant de ressource
+         *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
-            "area_risks" to "Risques", "groundwater" to "Nappe phréatique",
-            "solar_pv" to "Solaire", "water_network" to "Eau potable",
-            "official_dpe" to "DPE officiel", "local_taxes" to "Fiscalité locale",
-            "schools" to "Écoles", "prices" to "Prix de vente", "rnb" to "ID-RNB")
+            "area_risks" to R.string.block_risks,
+            "groundwater" to R.string.block_groundwater,
+            "solar_pv" to R.string.block_solar,
+            "water_network" to R.string.block_water,
+            "official_dpe" to R.string.block_dpe,
+            "local_taxes" to R.string.block_taxes,
+            "schools" to R.string.block_schools,
+            "prices" to R.string.block_prices,
+            "rnb" to R.string.block_rnb)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -82,8 +90,8 @@ class BuildingModel {
                         pending.value = emptySet()
                     }
                     is StreamEvent.Failure -> {
-                        failure = if (event.status == 404) "Pas de fiche pour ce bâtiment."
-                                  else "Données momentanément indisponibles."
+                        failure = if (event.status == 404) context.getString(R.string.no_sheet)
+                                  else context.getString(R.string.data_unavailable)
                         pending.value = emptySet()
                     }
                 }
@@ -91,7 +99,7 @@ class BuildingModel {
         } catch (e: Exception) {
             // Réseau coupé : on garde ce qui est affiché et on le dit, plutôt
             // que de vider l'écran.
-            if (building == null) failure = "Données momentanément indisponibles."
+            if (building == null) failure = context.getString(R.string.data_unavailable)
             pending.value = emptySet()
         }
     }
@@ -140,13 +148,13 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                Text(model.searched ?: model.address ?: "Bâtiment",
+                Text(model.searched ?: model.address ?: stringResource(R.string.sheet_fallback_title),
                     modifier = Modifier.weight(1f),
                     fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 // Une CROIX, pas le mot « Fermer » : revenir à la carte se
                 // cherchait, et c'est le geste le plus fréquent de l'app.
                 IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Fermer la fiche")
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.sheet_close))
                 }
             }
             // Un « bâtiment groupe » BDNB couvre parfois plusieurs adresses :
@@ -154,7 +162,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
             val principal = model.address
             if (principal != null && model.searched != null &&
                 !principal.equals(model.searched, ignoreCase = true)) {
-                Text("Adresse principale du bâtiment : $principal",
+                Text(stringResource(R.string.main_address, principal),
                     fontSize = 12.sp, color = Color.Gray)
             }
 
@@ -165,34 +173,35 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                 b == null -> CircularProgressIndicator()
                 else -> {
                     EnergySection(b, model.blocks["official_dpe"])
-                    Section("Bâtiment") {
-                        Row("Année de construction", b.num("construction_year")?.toInt()?.toString())
-                        Row("Hauteur", b.num("height_m")?.let { "${it.toInt()} m" })
+                    Section(stringResource(R.string.section_building)) {
+                        Row(stringResource(R.string.build_year), b.num("construction_year")?.toInt()?.toString())
+                        Row(stringResource(R.string.height), b.num("height_m")?.let { "${it.toInt()} m" })
                         // « Niveaux » et non « Étages » : en français, « 1 étage »
                         // se comprend comme rez-de-chaussée + 1. Et à un seul
                         // niveau, on dit « de plain-pied » — critère décisif
                         // pour qui vieillit ou vit avec un handicap.
-                        Row("Niveaux", b.num("floors")?.toInt()?.let {
+                        Row(stringResource(R.string.levels), b.num("floors")?.toInt()?.let {
                             if (it == 1) "1 — de plain-pied" else it.toString() })
-                        Row("Logements", b.num("dwellings")?.toInt()?.toString())
-                        Row("Murs", b.str("wall_material")?.capitalize())
-                        Row("Toiture", b.str("roof_material")?.capitalize())
+                        Row(stringResource(R.string.dwellings), b.num("dwellings")?.toInt()?.toString())
+                        Row(stringResource(R.string.walls), b.str("wall_material")?.capitalize())
+                        Row(stringResource(R.string.roof), b.str("roof_material")?.capitalize())
                     }
                     RisksSection(model.blocks["area_risks"])
                     EnvironmentSection(model.blocks["groundwater"], model.blocks["solar_pv"],
                         model.blocks["water_network"])
                     NeighbourhoodSection(model.blocks["local_taxes"], model.blocks["schools"],
                         model.blocks["prices"])
-                    Section("Identifiants") {
-                        Row("ID-RNB", model.blocks["rnb"].str("rnb_id"))
-                        Row("ID BDNB", b.str("bdnb_id"))
+                    Section(stringResource(R.string.section_ids)) {
+                        Row(stringResource(R.string.id_rnb), model.blocks["rnb"].str("rnb_id"))
+                        Row(stringResource(R.string.id_bdnb), b.str("bdnb_id"))
                     }
                 }
             }
 
             if (model.pending.value.isNotEmpty()) {
-                Text("Encore en cours : " + model.pending.value
-                    .mapNotNull { BuildingModel.LABELS[it] }.sorted().joinToString(", ") + "…",
+                Text(stringResource(R.string.pending_prefix) + model.pending.value
+                    .mapNotNull { BuildingModel.LABELS[it] }
+                    .map { stringResource(it) }.sorted().joinToString(", ") + "…",
                     fontSize = 12.sp, color = Color.Gray)
             }
         }
@@ -212,42 +221,46 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
  * dire ce qui a été consommé ET quand il rouvre, sinon il ressemble à une panne
  * définitive.
  */
-fun quotaLine(q: Quota?, building: String?): String? {
+fun quotaLine(ctx: Context, q: Quota?, building: String?): String? {
     if (q == null) return null
-    if (building != null && building in q.freeAgain)
-        return "Fiche déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
+    if (building != null && building in q.freeAgain) return ctx.getString(R.string.quota_cached)
     val total = q.reportsIncluded ?: return null
-    val whenTxt = when (q.period) { "month" -> "ce mois-ci"; "day" -> "aujourd'hui"; else -> "" }
+    val quand = when (q.period) {
+        "month" -> ctx.getString(R.string.quota_month)
+        "day" -> ctx.getString(R.string.quota_today)
+        else -> ""
+    }
     // CONSOMMATION, et non solde restant : « 10 bâtiments restants sur 10 » se
     // lisait comme un compteur déjà plein, et alarmait avant le premier usage.
-    // Un compteur qui part de zéro et monte se comprend d'un coup d'œil.
-    var text = if (q.reportsLeft == 0) {
-        "$total/$total" + (reopensIn(q.resetsAt)?.let { " — la limite repart $it" } ?: "")
+    var texte = if (q.reportsLeft == 0) {
+        ctx.getString(R.string.quota_full, total) +
+            (reopensIn(ctx, q.resetsAt)?.let { ctx.getString(R.string.quota_reopens, it) } ?: "")
     } else {
-        "${q.reportsUsed}/$total fiches" + if (whenTxt.isEmpty()) "" else " $whenTxt"
+        ctx.getString(R.string.quota_used, q.reportsUsed, total) +
+            if (quand.isEmpty()) "" else " $quand"
     }
-    if (q.units > 0) text += " · ${q.units} à l'unité"
-    return text
+    if (q.units > 0) texte += ctx.getString(R.string.quota_units, q.units)
+    return texte
 }
 
 /** « dans 3 heures » : « demain » ne dit rien à 23 h 50. */
-private fun reopensIn(iso: String?): String? {
+private fun reopensIn(ctx: Context, iso: String?): String? {
     val at = runCatching { java.time.OffsetDateTime.parse(iso) }.getOrNull() ?: return null
-    val seconds = java.time.Duration.between(java.time.OffsetDateTime.now(), at).seconds
-    if (seconds <= 0) return null
-    if (seconds < 3600) {
-        val m = (seconds / 60).coerceAtLeast(1)
-        return "dans $m minute" + if (m > 1) "s" else ""
+    val secondes = java.time.Duration.between(java.time.OffsetDateTime.now(), at).seconds
+    if (secondes <= 0) return null
+    if (secondes < 3600) {
+        val m = (secondes / 60).coerceAtLeast(1).toInt()
+        return ctx.getString(if (m > 1) R.string.in_minutes_plural else R.string.in_minutes, m)
     }
-    val h = seconds / 3600
-    return "dans $h heure" + if (h > 1) "s" else ""
+    val h = (secondes / 3600).toInt()
+    return ctx.getString(if (h > 1) R.string.in_hours_plural else R.string.in_hours, h)
 }
 
 @Composable
 private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
     val energy = b["energy"]
     val cls = energy.str("dpe_class")
-    Section("Énergie") {
+    Section(stringResource(R.string.section_energy)) {
         Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(dpeColor(cls)),
                 contentAlignment = Alignment.Center) {
@@ -271,11 +284,11 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
             Text("⚠ Location interdite à partir de ${it.take(4)} (loi Climat et Résilience)",
                 color = Color(0.9f, 0.5f, 0.1f), fontSize = 14.sp)
         }
-        Row("GES", energy.num("ghg_kgco2_m2y")?.let { "${it.toInt()} kgCO₂/m²/an" })
-        Row("Date du DPE", energy.str("dpe_date")?.take(10))
-        Row("N° DPE officiel", officialDpe.str("dpe_number"))
-        Row("Surface habitable", officialDpe.num("surface_habitable_m2")?.let { "${it.toInt()} m²" })
-        Row("Coût annuel d'énergie", officialDpe.num("annual_cost_eur")?.let { "${it.toInt()} €/an" })
+        Row(stringResource(R.string.ghg), energy.num("ghg_kgco2_m2y")?.let { "${it.toInt()} kgCO₂/m²/an" })
+        Row(stringResource(R.string.dpe_date), energy.str("dpe_date")?.take(10))
+        Row(stringResource(R.string.dpe_number), officialDpe.str("dpe_number"))
+        Row(stringResource(R.string.living_area), officialDpe.num("surface_habitable_m2")?.let { "${it.toInt()} m²" })
+        Row(stringResource(R.string.annual_cost), officialDpe.num("annual_cost_eur")?.let { "${it.toInt()} €/an" })
     }
 }
 
@@ -306,13 +319,14 @@ private fun Row(label: String, value: String?) {
 
 @Composable
 private fun RisksSection(risks: JsonElement?) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val natural = risks.strings("risques_naturels")
     val techno = risks.strings("risques_technologiques")
     if (natural.isEmpty() && techno.isEmpty()) return
-    Section("Risques (Géorisques)") {
-        if (natural.isNotEmpty()) Row("Naturels", natural.joinToString(", ", transform = ::humanize))
-        if (techno.isNotEmpty()) Row("Technologiques", techno.joinToString(", ", transform = ::humanize))
-        Row("Aléa retrait-gonflement", risks.str("clay_shrink_swell"))
+    Section(stringResource(R.string.section_risks)) {
+        if (natural.isNotEmpty()) Row(stringResource(R.string.risks_natural), natural.joinToString(", ") { humanize(ctx, it) })
+        if (techno.isNotEmpty()) Row(stringResource(R.string.risks_techno), techno.joinToString(", ") { humanize(ctx, it) })
+        Row(stringResource(R.string.clay_hazard), risks.str("clay_shrink_swell"))
     }
 }
 
@@ -321,17 +335,24 @@ private fun RisksSection(risks: JsonElement?) {
  * (« retraitGonflementArgile ») : personne ne doit lire ça dans une fiche.
  */
 private val RISK_NAMES = mapOf(
-    "inondation" to "Inondation", "remonteeNappe" to "Remontée de nappe",
-    "seisme" to "Séisme", "mouvementTerrain" to "Mouvement de terrain",
-    "retraitGonflementArgile" to "Retrait-gonflement des argiles",
-    "feuForet" to "Feu de forêt", "radon" to "Radon", "icpe" to "ICPE",
-    "pollutionSols" to "Pollution des sols", "nucleaire" to "Nucléaire",
-    "ruptureBarrage" to "Rupture de barrage", "risqueMinier" to "Risque minier",
-    "cavite" to "Cavité souterraine", "avalanche" to "Avalanche",
-    "canalisationsMatieresDangereuses" to "Canalisations (matières dangereuses)",
+    "inondation" to R.string.risk_inondation,
+    "remonteeNappe" to R.string.risk_remonteeNappe,
+    "seisme" to R.string.risk_seisme,
+    "mouvementTerrain" to R.string.risk_mouvementTerrain,
+    "retraitGonflementArgile" to R.string.risk_retraitGonflementArgile,
+    "feuForet" to R.string.risk_feuForet,
+    "radon" to R.string.risk_radon,
+    "icpe" to R.string.risk_icpe,
+    "pollutionSols" to R.string.risk_pollutionSols,
+    "nucleaire" to R.string.risk_nucleaire,
+    "ruptureBarrage" to R.string.risk_ruptureBarrage,
+    "risqueMinier" to R.string.risk_risqueMinier,
+    "cavite" to R.string.risk_cavite,
+    "avalanche" to R.string.risk_avalanche,
+    "canalisationsMatieresDangereuses" to R.string.risk_canalisationsMatieresDangereuses,
 )
 
-private fun humanize(key: String): String = RISK_NAMES[key]
+private fun humanize(ctx: Context, key: String): String = RISK_NAMES[key]?.let(ctx::getString)
     ?: key.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
 
 @Composable
@@ -340,11 +361,11 @@ private fun EnvironmentSection(groundwater: JsonElement?, solar: JsonElement?, w
     val yield_ = solar.num("yield_kwh_per_kwc_y")
     val efficiency = water.num("efficiency_pct")
     if (depth == null && yield_ == null && efficiency == null) return
-    Section("Environnement") {
-        Row("Nappe phréatique", depth?.let { fmt("%.1f m", it) })
-        Row("Potentiel solaire", yield_?.let { "${it.toInt()} kWh/an par kWc" })
-        Row("Rendement du réseau d'eau", efficiency?.let { fmt("%.1f %%", it) })
-        Row("Prix de l'eau", water.num("price_eur_m3")?.let { fmt("%.2f €/m³", it) })
+    Section(stringResource(R.string.section_environment)) {
+        Row(stringResource(R.string.groundwater), depth?.let { fmt("%.1f m", it) })
+        Row(stringResource(R.string.solar), yield_?.let { "${it.toInt()} kWh/an par kWc" })
+        Row(stringResource(R.string.water_efficiency), efficiency?.let { fmt("%.1f %%", it) })
+        Row(stringResource(R.string.water_price), water.num("price_eur_m3")?.let { fmt("%.2f €/m³", it) })
     }
 }
 
@@ -354,14 +375,14 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
     val nbSchools = (schools as? JsonArray)?.size ?: 0
     val tax = taxes.num("property_tax_built_pct")
     if (medians.isEmpty() && nbSchools == 0 && tax == null) return
-    Section("Quartier") {
+    Section(stringResource(R.string.section_area)) {
         medians.keys.sorted().forEach { k ->
             Row("Prix médian (${k.lowercase()})",
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { "$it €/m²" })
         }
-        Row("Taxe foncière (bâti)", tax?.let { fmt("%.2f %%", it) })
-        Row("Ordures ménagères", taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
-        Row("Écoles à proximité", if (nbSchools > 0) "$nbSchools" else null)
+        Row(stringResource(R.string.property_tax), tax?.let { fmt("%.2f %%", it) })
+        Row(stringResource(R.string.waste_tax), taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
+        Row(stringResource(R.string.schools), if (nbSchools > 0) "$nbSchools" else null)
     }
 }
 

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,9 +76,9 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
                     onReport(file)
                     onQuotaChanged(runCatching { Api.quota(context) }.getOrNull())
                 } catch (e: ReportError) {
-                    error = e.detail.ifBlank { "La fiche n'a pas pu être générée. Réessayez." }
+                    error = e.detail.ifBlank { context.getString(R.string.report_failed) }
                 } catch (e: Exception) {
-                    error = "La fiche n'a pas pu être générée. Réessayez."
+                    error = context.getString(R.string.report_failed)
                 } finally {
                     running = false
                 }
@@ -104,7 +105,8 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
                 contentDescription = null,
                 modifier = Modifier.graphicsLayer { rotationZ = if (running) angle else 0f })
             Spacer(Modifier.width(10.dp))
-            Text(if (running) stageLabel(elapsed) else "Obtenir la fiche PDF",
+            Text(if (running) stringResource(stageLabel(elapsed))
+                 else stringResource(R.string.get_report),
                 fontWeight = FontWeight.SemiBold)
             if (running) {
                 Spacer(Modifier.weight(1f))
@@ -112,7 +114,7 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
             }
         }
 
-        val message = error ?: quotaLine(quota, model.buildingId)
+        val message = error ?: quotaLine(context, quota, model.buildingId)
         if (message != null) {
             // Dire ce qu'il reste AVANT d'en manquer : on découvrait la limite
             // en la heurtant. Aucun prix affiché tant que le mur payant n'existe
@@ -125,8 +127,8 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
 }
 
 /** Étapes calées sur les durées réelles observées côté serveur. */
-private fun stageLabel(elapsed: Int): String = when {
-    elapsed < 3 -> "Collecte des données…"
-    elapsed < 12 -> "Rendu de la carte 3D…"
-    else -> "Mise en page…"
+private fun stageLabel(elapsed: Int): Int = when {
+    elapsed < 3 -> R.string.stage_collect
+    elapsed < 12 -> R.string.stage_render
+    else -> R.string.stage_layout
 }

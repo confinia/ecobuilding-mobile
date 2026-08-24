@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -114,8 +115,8 @@ private fun Screen() {
                 FilledTonalIconButton(onClick = { aerial = !aerial },
                     modifier = Modifier.size(44.dp).clip(CircleShape)) {
                     Icon(if (aerial) Icons.Filled.Map else Icons.Filled.Public,
-                        contentDescription = if (aerial) "Afficher le plan"
-                                             else "Afficher la photo aérienne")
+                        contentDescription = if (aerial) stringResource(R.string.show_plan)
+                                             else stringResource(R.string.show_aerial))
                 }
             }
         }
@@ -129,7 +130,7 @@ private fun Screen() {
             // de l'app : elle doit se reconnaître d'un téléphone à l'autre.
             TextField(
                 value = search, onValueChange = { search = it },
-                placeholder = { Text("Adresse en France…") },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
@@ -144,13 +145,13 @@ private fun Screen() {
                 leadingIcon = {
                     IconButton(onClick = { submit(search)?.let { t -> target = t
                         focus = null; search = ""; suggestions = emptyList() } }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Rechercher")
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.search_action))
                     }
                 },
                 trailingIcon = {
                     if (search.isNotEmpty()) {
                         IconButton(onClick = { search = ""; suggestions = emptyList() }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Effacer")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.search_clear))
                         }
                     }
                 },
@@ -185,7 +186,7 @@ private fun Screen() {
             Surface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
                 .padding(bottom = 40.dp),
                 shape = MaterialTheme.shapes.extraLarge, tonalElevation = 4.dp) {
-                Text("Touchez à nouveau ce bâtiment pour voir sa fiche",
+                Text(stringResource(R.string.tap_again),
                     Modifier.padding(horizontal = 16.dp, vertical = 10.dp), fontSize = 14.sp)
             }
         }
@@ -194,7 +195,7 @@ private fun Screen() {
         // le bêta-testeur envoie pour être exempté de quota : sans ce geste, il
         // faudrait le lui extraire de l'appareil, ce qu'aucun partenaire ne fera.
         var copied by remember { mutableStateOf(false) }
-        Text(if (copied) "Identifiant copié" else versionLabel(context),
+        Text(if (copied) stringResource(R.string.id_copied) else versionLabel(context),
             fontSize = 10.sp, color = Color.Gray,
             modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
                 .padding(12.dp)
