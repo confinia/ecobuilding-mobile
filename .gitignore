@@ -22,3 +22,5 @@ android/.idea/
 *.jks
 *.keystore
 android/keystore.properties
+
+.build/
