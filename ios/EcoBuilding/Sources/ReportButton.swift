@@ -20,6 +20,10 @@ struct ReportButton: View {
     @State private var pdf: URL?
     @State private var timer: Timer?
     @State private var quota: API.Quota?
+    /// Angle de la flèche pendant la préparation. Une icône figée dix à
+    /// quarante-cinq secondes laisse croire que rien ne se passe — le
+    /// mouvement est ce qui distingue « ça travaille » de « c'est bloqué ».
+    @State private var spinning = false
 
     enum Phase: Equatable {
         case idle, running, failed
@@ -31,6 +35,10 @@ struct ReportButton: View {
                 HStack(spacing: 10) {
                     Image(systemName: phase == .running
                           ? "arrow.triangle.2.circlepath" : "doc.text.fill")
+                        .rotationEffect(.degrees(spinning ? 360 : 0))
+                        .animation(spinning
+                                   ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                   : .default, value: spinning)
                     Text(phase == .running ? stageLabel : "Obtenir la fiche PDF")
                         .fontWeight(.semibold)
                     Spacer()
@@ -88,6 +96,7 @@ struct ReportButton: View {
     private func download() {
         guard let id = model.buildingID else { return }
         phase = .running
+        spinning = true
         elapsed = 0
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in elapsed += 1 }
@@ -97,10 +106,12 @@ struct ReportButton: View {
             do {
                 let url = try await API.report(buildingID: id, lon: model.lon, lat: model.lat)
                 phase = .idle
+                spinning = false
                 pdf = url                       // ouvre le lecteur
                 quota = try? await API.quota()  // le solde vient de changer
             } catch {
                 phase = .failed
+                spinning = false
             }
         }
     }

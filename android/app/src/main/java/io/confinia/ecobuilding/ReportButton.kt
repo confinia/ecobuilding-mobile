@@ -1,5 +1,11 @@
 package io.confinia.ecobuilding
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
@@ -9,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +51,16 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
         elapsed = 0
         while (running && isActive) { delay(1000); elapsed += 1 }
     }
+
+    // La flèche tourne tant que la fiche se prépare. Figée dix à quarante-cinq
+    // secondes, elle laissait croire que rien ne se passait — le mouvement est
+    // ce qui distingue « ça travaille » de « c'est bloqué ».
+    val rotation = rememberInfiniteTransition(label = "préparation")
+    val angle by rotation.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+        label = "angle")
 
     // Le téléchargement est décrit une seule fois : le bouton l'appelle, et le
     // double appui sur la carte aussi. Deux copies auraient divergé.
@@ -84,7 +101,8 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
                 containerColor = Color(0.17f, 0.48f, 0.29f), contentColor = Color.White),
         ) {
             Icon(if (running) Icons.Filled.Autorenew else Icons.Filled.Description,
-                contentDescription = null)
+                contentDescription = null,
+                modifier = Modifier.graphicsLayer { rotationZ = if (running) angle else 0f })
             Spacer(Modifier.width(10.dp))
             Text(if (running) stageLabel(elapsed) else "Obtenir la fiche PDF",
                 fontWeight = FontWeight.SemiBold)

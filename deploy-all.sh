@@ -33,7 +33,11 @@ if (cd android && ./gradlew -q :app:assembleDebug >/dev/null 2>&1); then
   APK=android/app/build/outputs/apk/debug/app-debug.apk
   ok "APK $(du -h "$APK" | cut -f1)"
   step "Android — installation"
-  DEVICES=$("$ADB" devices | awk '/\tdevice$/ {print $1}')
+  # Un même téléphone peut répondre DEUX fois — par câble et par Wi-Fi — et
+  # serait alors installé deux fois. On dédoublonne sur son numéro de série.
+  DEVICES=$(for d in $("$ADB" devices | awk '/\tdevice$/ {print $1}'); do
+              printf '%s %s\n' "$("$ADB" -s "$d" shell getprop ro.serialno 2>/dev/null | tr -d '\r')" "$d"
+            done | sort -u -k1,1 | awk '{print $2}')
   if [ -z "$DEVICES" ]; then
     skip "aucun appareil Android joignable"
   else
