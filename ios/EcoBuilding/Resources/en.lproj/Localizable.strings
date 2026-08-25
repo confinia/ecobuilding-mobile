@@ -100,3 +100,10 @@
 "water_efficiency" = "Water network efficiency";
 "water_price" = "Water price";
 "no_building_here" = "No building is described at this address in the national database (BDNB).";
+"block_commune" = "Commune (Confinia)";
+"section_commune" = "COMMUNE";
+"commune_name" = "Commune";
+"commune_since" = "Name and boundaries unchanged since";
+"commune_ended" = "Ceased to exist on";
+"commune_before" = "Previously";
+"commune_asof" = "Data as known on";
