@@ -99,3 +99,4 @@
 "waste_tax" = "Ordures ménagères";
 "water_efficiency" = "Rendement du réseau d'eau";
 "water_price" = "Prix de l'eau";
+"no_building_here" = "Aucun bâtiment n'est décrit à cette adresse dans la base nationale (BDNB).";

@@ -41,6 +41,14 @@ class BuildingModel {
     var blocks = mutableStateMapOf<String, JsonElement>()
     var pending = mutableStateOf(EXPECTED.toSet())
     var failure by mutableStateOf<String?>(null)
+
+    /* Pourquoi il n'y a pas de bâtiment — et non « une erreur est survenue ».
+     *
+     * Sans ce champ, une adresse sans bâtiment BDNB laissait `failure` et
+     * `building` tous deux nuls, et le rendu tombait sur l'indicateur de
+     * chargement : la fiche tournait indéfiniment sur une adresse parfaitement
+     * valide. C'est le cas de TOUTE l'outre-mer, où la BDNB n'a aucun bâtiment. */
+    var sansBatiment by mutableStateOf<String?>(null)
     var lon: Double? = null
     var lat: Double? = null
 
@@ -79,6 +87,10 @@ class BuildingModel {
                     is StreamEvent.Core -> {
                         address = (event.query["address"] as? JsonPrimitive)?.contentOrNull ?: address
                         building = event.buildings.firstOrNull() as? JsonObject
+                        sansBatiment = if (building == null)
+                            (event.noBuilding?.get("text") as? JsonPrimitive)?.contentOrNull
+                                ?: context.getString(R.string.no_building_here)
+                        else null
                         buildingId?.let(onResolved)
                     }
                     is StreamEvent.Block -> {
@@ -168,8 +180,15 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
 
             val failure = model.failure
             val b = model.building
+            val sansBatiment = model.sansBatiment
             when {
                 failure != null -> Text(failure, color = Color.Gray)
+                // Le motif AVANT l'attente : sinon on tourne sur une adresse
+                // dont on sait déjà qu'elle n'aura jamais de bâtiment.
+                b == null && sansBatiment != null -> {
+                    Text(sansBatiment, color = Color.Gray)
+                    RisksSection(model.blocks["area_risks"])
+                }
                 b == null -> CircularProgressIndicator()
                 else -> {
                     EnergySection(b, model.blocks["official_dpe"])

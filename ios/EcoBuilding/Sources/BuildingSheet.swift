@@ -21,6 +21,14 @@ final class BuildingModel: ObservableObject {
     @Published var pending: Set<String> = Set(BuildingModel.expected)
     @Published var failure: String?
 
+    /* Pourquoi il n'y a pas de bâtiment — et non « données indisponibles ».
+     *
+     * Sans ce champ, une adresse sans bâtiment BDNB laissait `failure` et
+     * `building` tous deux nils, et le rendu tombait sur `ProgressView` : la
+     * fiche tournait indéfiniment sur une adresse parfaitement valide. C'est
+     * le cas de TOUTE l'outre-mer, où la BDNB n'a aucun bâtiment. */
+    @Published var sansBatiment: String?
+
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
                            "official_dpe", "local_taxes", "schools", "prices", "rnb"]
     static let labels = [
@@ -58,9 +66,12 @@ final class BuildingModel: ObservableObject {
         do {
             for try await event in stream {
                 switch event {
-                case let .core(query, buildings):
+                case let .core(query, buildings, noBuilding):
                     address = query["address"]?.stringValue
                     building = buildings.first
+                    sansBatiment = building == nil
+                        ? (noBuilding?["text"]?.stringValue ?? t("no_building_here"))
+                        : nil
                     if let id = buildingID { onResolved?(id) }
                 case let .block(name, value):
                     blocks[name] = value
@@ -120,6 +131,11 @@ struct BuildingSheet: View {
                                          schools: model.blocks["schools"],
                                          prices: model.blocks["prices"])
                     IdentitySection(building: b, rnb: model.blocks["rnb"])
+                } else if let sansBatiment = model.sansBatiment {
+                    // Le motif AVANT l'attente : sinon on tourne sur une adresse
+                    // dont on sait déjà qu'elle n'aura jamais de bâtiment.
+                    Text(sansBatiment).foregroundStyle(.secondary)
+                    RisksSection(risks: model.blocks["area_risks"])
                 } else {
                     ProgressView().padding(.vertical, 24)
                 }
