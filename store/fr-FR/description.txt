@@ -1,0 +1,25 @@
+Sélectionnez un bâtiment sur la carte. Vous savez tout de lui.
+
+EcoBuilding réunit ce que l'État publie sur chaque bâtiment de France et vous le montre là où vous êtes : devant le bien, pendant la visite, ou la veille au soir.
+
+CE QUE VOUS VOYEZ
+• Classe énergétique (DPE) : la carte 3D colore chaque bâtiment, du vert au rouge. Un quartier se lit d'un coup d'œil.
+• Consommation, émissions de gaz à effet de serre, coût annuel d'énergie estimé, surface habitable, numéro du diagnostic officiel.
+• Le bâtiment : année de construction, hauteur, nombre de niveaux, nombre de logements, matériaux des murs et de la toiture.
+• Les risques de la zone : inondation, retrait-gonflement des argiles, séisme, mouvement de terrain, radon, pollution des sols, canalisations de matières dangereuses.
+• L'environnement : profondeur de la nappe phréatique, potentiel solaire, rendement et prix du réseau d'eau.
+• Le quartier : prix médian au mètre carré, taxe foncière, taxe d'ordures ménagères, écoles à proximité.
+
+VOIR LE TERRAIN
+Basculez en vue satellite : la photo aérienne de l'IGN, avec les limites de parcelles du cadastre. On voit enfin où s'arrête le terrain, les arbres, les annexes, les accès — ce qu'aucune donnée chiffrée ne décrit.
+
+LA FICHE PDF
+Un bouton, et vous obtenez un document daté et sourcé : toutes les données du bâtiment, la photo aérienne avec le bâtiment entouré, une carte 3D, et l'origine de chaque information. C'est le document que vous envoyez à un client, à un notaire ou à un artisan.
+
+D'OÙ VIENNENT LES DONNÉES
+Des bases publiques de l'État français : base de données nationale des bâtiments, base adresse nationale, Géorisques, ADEME, DGFiP, IGN. Chaque source est citée dans la fiche PDF.
+
+SANS COMPTE, SANS PUBLICITÉ
+Aucune inscription. L'application s'ouvre sur la carte. Votre position sert uniquement à centrer la carte sur votre appareil : elle n'est jamais transmise à nos serveurs.
+
+Les données publiques décrivent le bâtiment tel qu'il est déclaré. Elles peuvent être incomplètes ou anciennes : un diagnostic n'est pas toujours publié, et l'application le dit quand c'est le cas.
