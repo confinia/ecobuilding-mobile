@@ -39,7 +39,7 @@ struct ReportButton: View {
                         .animation(spinning
                                    ? .linear(duration: 1).repeatForever(autoreverses: false)
                                    : .default, value: spinning)
-                    Text(phase == .running ? stageLabel : "Obtenir la fiche PDF")
+                    Text(phase == .running ? stageLabel : t("get_report"))
                         .fontWeight(.semibold)
                     Spacer()
                     if phase == .running {
@@ -55,7 +55,7 @@ struct ReportButton: View {
             .disabled(phase == .running || model.buildingID == nil)
 
             if phase == .failed {
-                Text("La fiche n'a pas pu être générée. Réessayez.")
+                Text(t("report_failed"))
                     .font(.footnote).foregroundStyle(.orange)
             } else if let left = quota?.summary(for: model.buildingID) {
                 // Dire ce qu'il reste AVANT d'en manquer : on découvrait la
@@ -87,9 +87,9 @@ struct ReportButton: View {
     private var stageLabel: String {
         // Étapes calées sur les durées réelles observées côté serveur.
         switch elapsed {
-        case ..<3: return "Collecte des données…"
-        case 3..<12: return "Rendu de la carte 3D…"
-        default: return "Mise en page…"
+        case ..<3: return t("stage_collect")
+        case 3..<12: return t("stage_render")
+        default: return t("stage_layout")
         }
     }
 
@@ -144,12 +144,12 @@ private struct PDFPreview: View {
                         .font(.title2)
                         .foregroundStyle(.secondary)
                 }
-                .accessibilityLabel("Fermer la fiche")
+                .accessibilityLabel(t("sheet_close"))
                 Spacer()
                 ShareLink(item: url) {
                     Image(systemName: "square.and.arrow.up").font(.title3)
                 }
-                .accessibilityLabel("Partager la fiche")
+                .accessibilityLabel(t("report_share"))
             }
             .padding(.horizontal, 16).padding(.vertical, 10)
             .background(.regularMaterial)

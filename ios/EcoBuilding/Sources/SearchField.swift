@@ -27,7 +27,7 @@ struct SearchField: View {
                 } label: {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 }
-                TextField("Adresse en France…", text: $text)
+                TextField(t("search_hint"), text: $text)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.search)
