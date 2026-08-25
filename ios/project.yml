@@ -6,6 +6,8 @@
 name: EcoBuilding
 options:
   bundleIdPrefix: io.confinia
+  # Langues connues du projet : sans elles, Xcode n'embarque pas en.lproj.
+  developmentLanguage: fr
   deploymentTarget:
     iOS: "16.0"          # couvre l'iPhone 8 et au-delà : nos utilisateurs
                          # visitent des logements, pas des salons de la tech
@@ -25,6 +27,10 @@ targets:
     sources:
       - path: EcoBuilding/Sources
       - path: EcoBuilding/Assets.xcassets
+      # Tables de chaînes fr/en, ENGENDRÉES depuis res/values*/strings.xml
+      # côté Android : une seule décision de vocabulaire pour les deux apps,
+      # et aucune divergence possible entre elles.
+      - path: EcoBuilding/Resources
     dependencies:
       - package: MapLibre
     settings:
@@ -49,6 +55,9 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleLightContent
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # Sans cette liste, iOS n'expose que la langue de développement et
+        # l'app reste en français sur un téléphone anglais.
+        DEVELOPMENT_LANGUAGE: fr
         # La géolocalisation est LE service que le web ne rend pas : « quels
         # bâtiments autour de moi ». Le texte est vu par l'utilisateur ET par la
         # revue Apple — il doit dire l'usage réel, pas une formule creuse.

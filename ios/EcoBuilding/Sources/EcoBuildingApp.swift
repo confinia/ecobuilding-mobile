@@ -97,7 +97,7 @@ struct ContentView: View {
                             .background(.regularMaterial, in: Circle())
                     }
                     .padding(.trailing, 12)
-                    .accessibilityLabel(aerial ? "Afficher le plan" : "Afficher la photo aérienne")
+                    .accessibilityLabel(aerial ? t("show_plan") : t("show_aerial"))
                 }
                 .padding(.top, 72)
                 Spacer()
@@ -127,7 +127,7 @@ struct ContentView: View {
             if armed != nil {
                 VStack {
                     Spacer()
-                    Text("Touchez à nouveau ce bâtiment pour voir sa fiche")
+                    Text(t("tap_again"))
                         .font(.callout.weight(.medium))
                         .padding(.horizontal, 16).padding(.vertical, 10)
                         .background(.regularMaterial, in: Capsule())
@@ -153,7 +153,7 @@ struct ContentView: View {
                         UIPasteboard.general.string = InstallID.current
                         copied = true
                     } label: {
-                        Text(copied ? "Identifiant copié" : Self.versionLabel)
+                        Text(copied ? t("id_copied") : Self.versionLabel)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8).padding(.vertical, 3)

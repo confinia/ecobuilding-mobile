@@ -70,15 +70,15 @@ final class BuildingModel: ObservableObject {
                     pending.removeAll()
                 case let .failure(status, detail):
                     failure = status == 404
-                        ? "Pas de fiche pour ce bâtiment."
-                        : (detail.isEmpty ? "Données momentanément indisponibles." : detail)
+                        ? t("no_sheet")
+                        : (detail.isEmpty ? t("data_unavailable") : detail)
                     pending.removeAll()
                 }
             }
         } catch {
             // Réseau coupé en cours de route : on garde ce qui est déjà affiché
             // et on le dit, plutôt que de vider l'écran.
-            if building == nil { failure = "Données momentanément indisponibles." }
+            if building == nil { failure = t("data_unavailable") }
             pending.removeAll()
         }
     }
@@ -98,12 +98,12 @@ struct BuildingSheet: View {
       VStack(spacing: 0) {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(model.searched ?? model.address ?? "Bâtiment").font(.title3.bold())
+                Text(model.searched ?? model.address ?? t("sheet_fallback_title")).font(.title3.bold())
                 // Le groupe BDNB porte parfois une autre adresse principale :
                 // la dire, plutôt que de laisser croire à une erreur.
                 if let principal = model.address, let searched = model.searched,
                    principal.caseInsensitiveCompare(searched) != .orderedSame {
-                    Text("Adresse principale du bâtiment : \(principal)")
+                    Text(t("main_address", principal))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
 
@@ -125,7 +125,7 @@ struct BuildingSheet: View {
                 }
 
                 if !model.pending.isEmpty {
-                    Text("Encore en cours : " + model.pending
+                    Text(t("pending_prefix") + model.pending
                         .compactMap { BuildingModel.labels[$0] }
                         .sorted().joined(separator: ", ") + "…")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -188,7 +188,7 @@ private struct EnergySection: View {
     var body: some View {
         let energy = building["energy"]
         let cls = energy?["dpe_class"]?.stringValue
-        SectionBox(title: "Énergie") {
+        SectionBox(title: t("section_energy")) {
             HStack(spacing: 12) {
                 Text(cls ?? "?")
                     .font(.title2.bold()).foregroundStyle(.white)
@@ -196,27 +196,27 @@ private struct EnergySection: View {
                     .background(DPE.color(cls), in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 2) {
                     // Un « ? » nu n'explique rien : on dit ce qu'il signifie.
-                    Text(cls.map { "Classe DPE \($0)" } ?? "DPE non renseigné")
+                    Text(cls.map { t("dpe_class", $0) } ?? t("dpe_missing"))
                         .font(.callout.weight(.medium))
                     if cls == nil {
-                        Text("Aucun diagnostic publié pour ce bâtiment")
+                        Text(t("dpe_none_published"))
                             .font(.caption).foregroundStyle(.secondary)
                     } else if let kwh = energy?["consumption_kwh_m2y"]?.doubleValue {
-                        Text("\(Int(kwh)) kWh/m²/an").font(.caption).foregroundStyle(.secondary)
+                        Text(t("unit_kwh_m2y", Int(kwh))).font(.caption).foregroundStyle(.secondary)
                     }
                 }
             }
             if let ban = energy?["rental_ban"]?["rental_ban_date"]?.stringValue {
-                Text("⚠ Location interdite à partir de \(ban.prefix(4)) (loi Climat et Résilience)")
+                Text(t("rental_ban", String(ban.prefix(4))))
                     .font(.callout).foregroundStyle(.orange)
             }
-            Row(label: "GES", value: energy?["ghg_kgco2_m2y"]?.doubleValue.map { "\(Int($0)) kgCO₂/m²/an" })
-            Row(label: "Date du DPE", value: energy?["dpe_date"]?.stringValue.map { String($0.prefix(10)) })
-            Row(label: "N° DPE officiel", value: officialDPE?["dpe_number"]?.stringValue)
-            Row(label: "Surface habitable",
-                value: officialDPE?["surface_habitable_m2"]?.doubleValue.map { "\(Int($0)) m²" })
-            Row(label: "Coût annuel d'énergie",
-                value: officialDPE?["annual_cost_eur"]?.doubleValue.map { "\(Int($0)) €/an" })
+            Row(label: t("ghg"), value: energy?["ghg_kgco2_m2y"]?.doubleValue.map { t("unit_ghg", Int($0)) })
+            Row(label: t("dpe_date"), value: energy?["dpe_date"]?.stringValue.map { String($0.prefix(10)) })
+            Row(label: t("dpe_number"), value: officialDPE?["dpe_number"]?.stringValue)
+            Row(label: t("living_area"),
+                value: officialDPE?["surface_habitable_m2"]?.doubleValue.map { t("unit_m2", Int($0)) })
+            Row(label: t("annual_cost"),
+                value: officialDPE?["annual_cost_eur"]?.doubleValue.map { t("unit_eur_year", Int($0)) })
         }
     }
 }
@@ -224,20 +224,20 @@ private struct EnergySection: View {
 private struct BuildingSection: View {
     let building: JSONValue
     var body: some View {
-        SectionBox(title: "Bâtiment") {
-            Row(label: "Année de construction", value: building["construction_year"]?.intValue.map(String.init))
-            Row(label: "Hauteur", value: building["height_m"]?.doubleValue.map { "\(Int($0)) m" })
+        SectionBox(title: t("section_building")) {
+            Row(label: t("build_year"), value: building["construction_year"]?.intValue.map(String.init))
+            Row(label: t("height"), value: building["height_m"]?.doubleValue.map { t("unit_metres", Int($0)) })
             // « Niveaux » et non « Étages » : en français, « 1 étage » se
             // comprend comme rez-de-chaussée + 1, alors que la BDNB compte des
             // niveaux — le rez-de-chaussée inclus. Et à un seul niveau, on dit
             // « de plain-pied » : c'est le mot qu'emploie un acheteur, et un
             // critère décisif pour qui vieillit ou vit avec un handicap.
-            Row(label: "Niveaux", value: building["floors"]?.intValue.map {
-                $0 == 1 ? "1 — de plain-pied" : String($0)
+            Row(label: t("levels"), value: building["floors"]?.intValue.map {
+                $0 == 1 ? t("single_storey") : String($0)
             })
-            Row(label: "Logements", value: building["dwellings"]?.intValue.map(String.init))
-            Row(label: "Murs", value: building["wall_material"]?.stringValue?.capitalized)
-            Row(label: "Toiture", value: building["roof_material"]?.stringValue?.capitalized)
+            Row(label: t("dwellings"), value: building["dwellings"]?.intValue.map(String.init))
+            Row(label: t("walls"), value: building["wall_material"]?.stringValue?.capitalized)
+            Row(label: t("roof"), value: building["roof_material"]?.stringValue?.capitalized)
         }
     }
 }
@@ -248,14 +248,14 @@ private struct RisksSection: View {
         let natural = (risks?["risques_naturels"]?.arrayValue ?? []).compactMap { $0.stringValue }
         let techno = (risks?["risques_technologiques"]?.arrayValue ?? []).compactMap { $0.stringValue }
         if !natural.isEmpty || !techno.isEmpty {
-            SectionBox(title: "Risques (Géorisques)") {
+            SectionBox(title: t("section_risks")) {
                 if !natural.isEmpty {
-                    Row(label: "Naturels", value: natural.map(Self.humanize).joined(separator: ", "))
+                    Row(label: t("risks_natural"), value: natural.map(Self.humanize).joined(separator: ", "))
                 }
                 if !techno.isEmpty {
-                    Row(label: "Technologiques", value: techno.map(Self.humanize).joined(separator: ", "))
+                    Row(label: t("risks_techno"), value: techno.map(Self.humanize).joined(separator: ", "))
                 }
-                Row(label: "Aléa retrait-gonflement", value: risks?["clay_shrink_swell"]?.stringValue)
+                Row(label: t("clay_hazard"), value: risks?["clay_shrink_swell"]?.stringValue)
             }
         }
     }
@@ -263,17 +263,16 @@ private struct RisksSection: View {
     /// Les clés de Géorisques arrivent en langage machine (« retraitGonflementArgile ») :
     /// personne ne doit lire ça dans une fiche.
     static func humanize(_ key: String) -> String {
+        // Traduits depuis la CLÉ MACHINE (`inondation`, `seisme`) et non depuis
+        // le français affiché : c'est ce qui les rend localisables. Les tables
+        // fr/en portent les mêmes clés que côté Android.
         let known = [
-            "inondation": "Inondation", "remonteeNappe": "Remontée de nappe",
-            "seisme": "Séisme", "mouvementTerrain": "Mouvement de terrain",
-            "retraitGonflementArgile": "Retrait-gonflement des argiles",
-            "feuForet": "Feu de forêt", "radon": "Radon", "icpe": "ICPE",
-            "pollutionSols": "Pollution des sols", "nucleaire": "Nucléaire",
-            "ruptureBarrage": "Rupture de barrage", "risqueMinier": "Risque minier",
-            "cavite": "Cavité souterraine", "avalanche": "Avalanche",
-            "canalisationsMatieresDangereuses": "Canalisations (matières dangereuses)",
+            "inondation", "remonteeNappe", "seisme", "mouvementTerrain",
+            "retraitGonflementArgile", "feuForet", "radon", "icpe",
+            "pollutionSols", "nucleaire", "ruptureBarrage", "risqueMinier",
+            "cavite", "avalanche", "canalisationsMatieresDangereuses",
         ]
-        if let v = known[key] { return v }
+        if known.contains(key) { return t("risk_" + key) }
         let spaced = key.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2",
                                               options: .regularExpression)
         return spaced.prefix(1).uppercased() + spaced.dropFirst()
@@ -289,11 +288,11 @@ private struct EnvironmentSection: View {
         let yield = solar?["yield_kwh_per_kwc_y"]?.doubleValue
         let eff = water?["efficiency_pct"]?.doubleValue
         if depth != nil || yield != nil || eff != nil {
-            SectionBox(title: "Environnement") {
-                Row(label: "Nappe phréatique", value: depth.map { String(format: "%.1f m", $0) })
-                Row(label: "Potentiel solaire", value: yield.map { "\(Int($0)) kWh/an par kWc" })
-                Row(label: "Rendement du réseau d'eau", value: eff.map { String(format: "%.1f %%", $0) })
-                Row(label: "Prix de l'eau", value: water?["price_eur_m3"]?.doubleValue.map {
+            SectionBox(title: t("section_environment")) {
+                Row(label: t("groundwater"), value: depth.map { String(format: "%.1f m", $0) })
+                Row(label: t("solar"), value: yield.map { t("unit_solar", Int($0)) })
+                Row(label: t("water_efficiency"), value: eff.map { String(format: "%.1f %%", $0) })
+                Row(label: t("water_price"), value: water?["price_eur_m3"]?.doubleValue.map {
                     String(format: "%.2f €/m³", $0) })
             }
         }
@@ -309,15 +308,15 @@ private struct NeighbourhoodSection: View {
         let nbSchools = schools?.arrayValue?.count ?? 0
         let tax = taxes?["property_tax_built_pct"]?.doubleValue
         if !medians.isEmpty || nbSchools > 0 || tax != nil {
-            SectionBox(title: "Quartier") {
+            SectionBox(title: t("section_area")) {
                 ForEach(medians.keys.sorted(), id: \.self) { k in
-                    Row(label: "Prix médian (\(k.lowercased()))",
-                        value: medians[k]?["median"]?.intValue.map { "\($0) €/m²" })
+                    Row(label: t("median_price", k.lowercased()),
+                        value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
                 }
-                Row(label: "Taxe foncière (bâti)", value: tax.map { String(format: "%.2f %%", $0) })
-                Row(label: "Ordures ménagères",
+                Row(label: t("property_tax"), value: tax.map { String(format: "%.2f %%", $0) })
+                Row(label: t("waste_tax"),
                     value: taxes?["waste_tax_pct"]?.doubleValue.map { String(format: "%.2f %%", $0) })
-                Row(label: "Écoles à proximité", value: nbSchools > 0 ? "\(nbSchools)" : nil)
+                Row(label: t("schools"), value: nbSchools > 0 ? "\(nbSchools)" : nil)
             }
         }
     }
@@ -327,9 +326,9 @@ private struct IdentitySection: View {
     let building: JSONValue
     let rnb: JSONValue?
     var body: some View {
-        SectionBox(title: "Identifiants") {
-            Row(label: "ID-RNB", value: rnb?["rnb_id"]?.stringValue)
-            Row(label: "ID BDNB", value: building["bdnb_id"]?.stringValue)
+        SectionBox(title: t("section_ids")) {
+            Row(label: t("id_rnb"), value: rnb?["rnb_id"]?.stringValue)
+            Row(label: t("id_bdnb"), value: building["bdnb_id"]?.stringValue)
         }
     }
 }

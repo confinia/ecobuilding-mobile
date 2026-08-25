@@ -213,10 +213,10 @@ enum API {
             guard seconds > 0 else { return nil }
             if seconds < 3600 {
                 let m = max(1, Int(seconds / 60))
-                return "dans \(m) minute" + (m > 1 ? "s" : "")
+                return t(m > 1 ? "in_minutes_plural" : "in_minutes", m)
             }
             let h = Int(seconds / 3600)
-            return "dans \(h) heure" + (h > 1 ? "s" : "")
+            return t(h > 1 ? "in_hours_plural" : "in_hours", h)
         }
 
         /// Ce qu'on affiche sous le bouton, ou nil quand il n'y a rien à dire.
@@ -226,28 +226,27 @@ enum API {
         /// rouvrir un document qu'il a pourtant déjà payé.
         func summary(for building: String?) -> String? {
             if let b = building, free_again?.contains(b) == true {
-                return "Fiche déjà obtenue aujourd'hui — nouveau téléchargement gratuit"
+                return t("quota_cached")
             }
             guard let total = reports_included else { return nil }   // sans limite
             // Sans indication du serveur, on n'invente pas : un vieux serveur
             // compte au MOIS, et annoncer « aujourd'hui » serait faux.
-            let when = period == "month" ? "ce mois-ci"
-                     : period == "day" ? "aujourd'hui" : ""
-            var text: String
+            let quand = period == "month" ? t("quota_month")
+                      : period == "day" ? t("quota_today") : ""
+            var texte: String
             if reports_left == 0 {
                 // Un mur doit DIRE quand il rouvre : « limite atteinte » seul
                 // laisse croire à un blocage définitif.
-                text = "\(total)/\(total)"
-                if let again = reopensIn { text += " — la limite repart \(again)" }
+                texte = t("quota_full", total)
+                if let again = reopensIn { texte += t("quota_reopens", again) }
             } else {
                 // CONSOMMATION, et non solde restant : « 10 bâtiments restants
-                // sur 10 » se lisait comme un compteur déjà plein, et alarmait
-                // avant même le premier usage.
-                text = "\(reports_used)/\(total) fiches"
-                if !when.isEmpty { text += " \(when)" }
+                // sur 10 » se lisait comme un compteur déjà plein.
+                texte = t("quota_used", reports_used, total)
+                if !quand.isEmpty { texte += " \(quand)" }
             }
-            if let u = units, u > 0 { text += " · \(u) à l'unité" }
-            return text
+            if let u = units, u > 0 { texte += t("quota_units", u) }
+            return texte
         }
 
         /// Le mur est-il atteint ? Sert à le montrer en orange plutôt qu'en gris.
