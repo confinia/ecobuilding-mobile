@@ -1,0 +1,27 @@
+Select a building on the map. You know everything about it.
+
+EcoBuilding brings together what the French state publishes about every building in France, and shows it where you are: in front of the property, during the viewing, or the evening before.
+
+WHAT YOU SEE
+• Energy rating (DPE): the 3D map colours every building, green to red. A whole street reads at a glance.
+• Consumption, greenhouse gas emissions, estimated yearly energy cost, living area, official survey number.
+• The building: year built, height, number of storeys, number of dwellings, wall and roof materials.
+• Local hazards: flooding, clay shrink-swell, earthquake, ground movement, radon, soil pollution, hazardous material pipelines.
+• The environment: groundwater depth, solar potential, water network efficiency and price.
+• The neighbourhood: median price per square metre, property tax, household waste tax, schools nearby.
+
+SEE THE LAND
+Switch to satellite view: the French national mapping agency's aerial photo, with cadastral parcel boundaries. You finally see where the land stops — the trees, the outbuildings, the access — what no figure describes.
+
+THE PDF REPORT
+One button, and you get a dated, sourced document: every figure about the building, the aerial photo with the building outlined, a 3D map, and the origin of each piece of information. This is the document you send to a client, a notaire or a builder.
+
+WHERE THE DATA COMES FROM
+French public databases: the national building database, the national address database, Géorisques, ADEME, DGFiP, IGN. Every source is cited in the PDF report.
+
+NO ACCOUNT, NO ADVERTISING
+No sign-up. The app opens on the map. Your location is only used to centre the map on your device: it is never sent to our servers.
+
+French terms are kept as they are — DPE, taxe foncière, Géorisques. These are the words you will read on French deeds, and a DPE is not a British EPC.
+
+Public data describes the building as declared. It can be incomplete or old: a survey is not always published, and the app says so when that is the case.

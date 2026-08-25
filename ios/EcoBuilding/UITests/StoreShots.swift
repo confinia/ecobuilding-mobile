@@ -30,8 +30,15 @@ final class StoreShots: XCTestCase {
         }
         app.tap()
 
-        let field = app.textFields["Adresse en France…"]
-        XCTAssertTrue(field.waitForExistence(timeout: 20), "champ de recherche absent")
+        // La langue est CONSTATÉE, jamais supposée : on prend le champ qui
+        // existe réellement, et on retient laquelle des deux formulations il
+        // portait. C'est elle qui décidera de la suite du scénario.
+        let anglais = app.textFields["Address in France…"]
+        let francais = app.textFields["Adresse en France…"]
+        XCTAssertTrue(anglais.waitForExistence(timeout: 20) || francais.exists,
+                      "aucun champ de recherche")
+        let enAnglais = anglais.exists
+        let field = enAnglais ? anglais : francais
         field.tap()
         field.typeText(address)
 
@@ -41,7 +48,8 @@ final class StoreShots: XCTestCase {
         suggestion.tap()
 
         // 1 — la fiche, remplie : c'est ce qu'on vient chercher.
-        let pdf = app.buttons["Obtenir la fiche PDF"].firstMatch
+        let pdf = app.buttons[enAnglais ? "Get the PDF report"
+                                        : "Obtenir la fiche PDF"].firstMatch
         XCTAssertTrue(pdf.waitForExistence(timeout: 30), "fiche non ouverte")
         Thread.sleep(forTimeInterval: 6)          // laisser les neuf sources arriver
         shot(app, "1-fiche")
@@ -52,7 +60,8 @@ final class StoreShots: XCTestCase {
         shot(app, "2-carte-3d")
 
         // 3 — la vue satellite avec les limites de parcelles.
-        let aerial = app.buttons["Afficher la photo aérienne"].firstMatch
+        let aerial = app.buttons[enAnglais ? "Show aerial photo"
+                                           : "Afficher la photo aérienne"].firstMatch
         if aerial.waitForExistence(timeout: 10) {
             aerial.tap()
             Thread.sleep(forTimeInterval: 10)     // laisser l'orthophoto se charger

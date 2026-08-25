@@ -1,0 +1,1 @@
+Find a building and get its energy rating, hazards, local prices and taxes — plus a formatted, sourced PDF report.
