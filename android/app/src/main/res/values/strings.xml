@@ -115,4 +115,14 @@
     <string name="risk_cavite">Cavité souterraine</string>
     <string name="risk_avalanche">Avalanche</string>
     <string name="risk_canalisationsMatieresDangereuses">Canalisations (matières dangereuses)</string>
+
+    <!-- Unités. Seul « /an » change : « /yr » en anglais, et kWc
+         devient kWp. Le reste est international. -->
+    <string name="unit_kwh_m2y">%1$d kWh/m²/an</string>
+    <string name="unit_ghg">%1$d kgCO₂/m²/an</string>
+    <string name="unit_eur_year">%1$d €/an</string>
+    <string name="unit_solar">%1$d kWh/an par kWc</string>
+    <string name="unit_metres">%1$d m</string>
+    <string name="unit_m2">%1$d m²</string>
+    <string name="unit_eur_m2">%1$d €/m²</string>
 </resources>

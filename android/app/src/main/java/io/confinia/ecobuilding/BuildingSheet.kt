@@ -173,15 +173,16 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                 b == null -> CircularProgressIndicator()
                 else -> {
                     EnergySection(b, model.blocks["official_dpe"])
+                    val plainPied = stringResource(R.string.single_storey)
                     Section(stringResource(R.string.section_building)) {
                         Row(stringResource(R.string.build_year), b.num("construction_year")?.toInt()?.toString())
-                        Row(stringResource(R.string.height), b.num("height_m")?.let { "${it.toInt()} m" })
+                        Row(stringResource(R.string.height), b.num("height_m")?.let { stringResource(R.string.unit_metres, it.toInt()) })
                         // « Niveaux » et non « Étages » : en français, « 1 étage »
                         // se comprend comme rez-de-chaussée + 1. Et à un seul
                         // niveau, on dit « de plain-pied » — critère décisif
                         // pour qui vieillit ou vit avec un handicap.
                         Row(stringResource(R.string.levels), b.num("floors")?.toInt()?.let {
-                            if (it == 1) "1 — de plain-pied" else it.toString() })
+                            if (it == 1) plainPied else it.toString() })
                         Row(stringResource(R.string.dwellings), b.num("dwellings")?.toInt()?.toString())
                         Row(stringResource(R.string.walls), b.str("wall_material")?.capitalize())
                         Row(stringResource(R.string.roof), b.str("roof_material")?.capitalize())
@@ -270,25 +271,26 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
             Spacer(Modifier.width(12.dp))
             Column {
                 // Un « ? » nu n'explique rien : on dit ce qu'il signifie.
-                Text(cls?.let { "Classe DPE $it" } ?: "DPE non renseigné",
+                Text(cls?.let { stringResource(R.string.dpe_class, it) }
+                        ?: stringResource(R.string.dpe_missing),
                     fontWeight = FontWeight.Medium)
                 if (cls == null) {
-                    Text("Aucun diagnostic publié pour ce bâtiment",
+                    Text(stringResource(R.string.dpe_none_published),
                         fontSize = 12.sp, color = Color.Gray)
                 } else energy.num("consumption_kwh_m2y")?.let {
-                    Text("${it.toInt()} kWh/m²/an", fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.unit_kwh_m2y, it.toInt()), fontSize = 12.sp, color = Color.Gray)
                 }
             }
         }
         energy.obj("rental_ban").str("rental_ban_date")?.let {
-            Text("⚠ Location interdite à partir de ${it.take(4)} (loi Climat et Résilience)",
+            Text(stringResource(R.string.rental_ban, it.take(4)),
                 color = Color(0.9f, 0.5f, 0.1f), fontSize = 14.sp)
         }
-        Row(stringResource(R.string.ghg), energy.num("ghg_kgco2_m2y")?.let { "${it.toInt()} kgCO₂/m²/an" })
+        Row(stringResource(R.string.ghg), energy.num("ghg_kgco2_m2y")?.let { stringResource(R.string.unit_ghg, it.toInt()) })
         Row(stringResource(R.string.dpe_date), energy.str("dpe_date")?.take(10))
         Row(stringResource(R.string.dpe_number), officialDpe.str("dpe_number"))
-        Row(stringResource(R.string.living_area), officialDpe.num("surface_habitable_m2")?.let { "${it.toInt()} m²" })
-        Row(stringResource(R.string.annual_cost), officialDpe.num("annual_cost_eur")?.let { "${it.toInt()} €/an" })
+        Row(stringResource(R.string.living_area), officialDpe.num("surface_habitable_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) })
+        Row(stringResource(R.string.annual_cost), officialDpe.num("annual_cost_eur")?.let { stringResource(R.string.unit_eur_year, it.toInt()) })
     }
 }
 
@@ -363,7 +365,7 @@ private fun EnvironmentSection(groundwater: JsonElement?, solar: JsonElement?, w
     if (depth == null && yield_ == null && efficiency == null) return
     Section(stringResource(R.string.section_environment)) {
         Row(stringResource(R.string.groundwater), depth?.let { fmt("%.1f m", it) })
-        Row(stringResource(R.string.solar), yield_?.let { "${it.toInt()} kWh/an par kWc" })
+        Row(stringResource(R.string.solar), yield_?.let { stringResource(R.string.unit_solar, it.toInt()) })
         Row(stringResource(R.string.water_efficiency), efficiency?.let { fmt("%.1f %%", it) })
         Row(stringResource(R.string.water_price), water.num("price_eur_m3")?.let { fmt("%.2f €/m³", it) })
     }
@@ -377,8 +379,8 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
     if (medians.isEmpty() && nbSchools == 0 && tax == null) return
     Section(stringResource(R.string.section_area)) {
         medians.keys.sorted().forEach { k ->
-            Row("Prix médian (${k.lowercase()})",
-                (medians[k] as JsonElement?).num("median")?.toInt()?.let { "$it €/m²" })
+            Row(stringResource(R.string.median_price, k.lowercase()),
+                (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
         }
         Row(stringResource(R.string.property_tax), tax?.let { fmt("%.2f %%", it) })
         Row(stringResource(R.string.waste_tax), taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
