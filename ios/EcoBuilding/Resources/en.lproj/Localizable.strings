@@ -99,3 +99,4 @@
 "waste_tax" = "Household waste tax";
 "water_efficiency" = "Water network efficiency";
 "water_price" = "Water price";
+"no_building_here" = "No building is described at this address in the national database (BDNB).";

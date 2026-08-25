@@ -125,4 +125,5 @@
     <string name="unit_metres">%1$d m</string>
     <string name="unit_m2">%1$d m²</string>
     <string name="unit_eur_m2">%1$d €/m²</string>
+    <string name="no_building_here">Aucun bâtiment n\'est décrit à cette adresse dans la base nationale (BDNB).</string>
 </resources>

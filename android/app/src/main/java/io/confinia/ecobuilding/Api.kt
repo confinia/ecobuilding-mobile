@@ -43,7 +43,10 @@ object InstallId {
 
 /** Un événement du flux NDJSON de l'API. */
 sealed interface StreamEvent {
-    data class Core(val query: JsonObject, val buildings: JsonArray) : StreamEvent
+    /** `noBuilding` : pourquoi cette adresse n'a pas de bâtiment. Non nul
+     *  seulement quand `buildings` est vide. */
+    data class Core(val query: JsonObject, val buildings: JsonArray,
+                    val noBuilding: JsonObject? = null) : StreamEvent
     data class Block(val name: String, val value: JsonElement) : StreamEvent
     data class Done(val query: JsonObject, val sources: List<String>) : StreamEvent
     data class Failure(val status: Int, val detail: String) : StreamEvent
@@ -145,7 +148,8 @@ object Api {
                 when ((obj["type"] as? JsonPrimitive)?.contentOrNull) {
                     "core" -> emit(StreamEvent.Core(
                         obj["query"] as? JsonObject ?: JsonObject(emptyMap()),
-                        obj["buildings"] as? JsonArray ?: JsonArray(emptyList())))
+                        obj["buildings"] as? JsonArray ?: JsonArray(emptyList()),
+                        obj["no_building"] as? JsonObject))
                     "block" -> (obj["name"] as? JsonPrimitive)?.contentOrNull?.let {
                         emit(StreamEvent.Block(it, obj["value"] ?: JsonNull))
                     }

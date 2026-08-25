@@ -73,7 +73,10 @@ enum API {
     /// L'app affiche donc le bâtiment dès qu'il arrive, puis chaque bloc à son
     /// tour.
     enum StreamEvent {
-        case core(query: [String: JSONValue], buildings: [JSONValue])
+        /// `noBuilding` : pourquoi cette adresse n'a pas de bâtiment. Non nil
+        /// seulement quand `buildings` est vide.
+        case core(query: [String: JSONValue], buildings: [JSONValue],
+                  noBuilding: [String: JSONValue]?)
         case block(name: String, value: JSONValue)
         case done(query: [String: JSONValue], sources: [String])
         case failure(status: Int, detail: String)
@@ -130,7 +133,8 @@ enum API {
                         case "core":
                             continuation.yield(.core(
                                 query: fields["query"]?.objectValue ?? [:],
-                                buildings: fields["buildings"]?.arrayValue ?? []))
+                                buildings: fields["buildings"]?.arrayValue ?? [],
+                                noBuilding: fields["no_building"]?.objectValue))
                         case "block":
                             if case let .string(name)? = fields["name"] {
                                 continuation.yield(.block(name: name,
