@@ -4,7 +4,11 @@ Ce que lit un acheteur avant d'installer. C'est le premier contact commercial
 du produit — il mérite le même suivi que le code.
 
 Ces fichiers ont été **rapatriés depuis App Store Connect**, ils ne sont pas une
-copie de mémoire : ils reflètent ce qui est réellement publié.
+copie de mémoire : ils reflètent ce qui y est réellement enregistré.
+
+Enregistré, pas publié : tant que la version est en `PREPARE_FOR_SUBMISSION`,
+rien n'est visible de personne. Ces textes sont ce qui **sera** publié le jour
+de la mise en ligne.
 
 ```
 store/fr-FR/     description, mots-clés, texte promotionnel, sous-titre
