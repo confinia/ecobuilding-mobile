@@ -30,12 +30,14 @@ final class BuildingModel: ObservableObject {
     @Published var sansBatiment: String?
 
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
-                           "official_dpe", "local_taxes", "schools", "prices", "rnb"]
+                           "official_dpe", "local_taxes", "schools", "prices", "rnb",
+                           "commune"]
     static let labels = [
         "area_risks": "Risques", "groundwater": "Nappe phréatique",
         "solar_pv": "Solaire", "water_network": "Eau potable",
         "official_dpe": "DPE officiel", "local_taxes": "Fiscalité locale",
         "schools": "Écoles", "prices": "Prix de vente", "rnb": "ID-RNB",
+        "commune": t("block_commune"),
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
@@ -130,6 +132,7 @@ struct BuildingSheet: View {
                     NeighbourhoodSection(taxes: model.blocks["local_taxes"],
                                          schools: model.blocks["schools"],
                                          prices: model.blocks["prices"])
+                    CommuneSection(commune: model.blocks["commune"])
                     IdentitySection(building: b, rnb: model.blocks["rnb"])
                 } else if let sansBatiment = model.sansBatiment {
                     // Le motif AVANT l'attente : sinon on tourne sur une adresse
@@ -310,6 +313,40 @@ private struct EnvironmentSection: View {
                 Row(label: t("water_efficiency"), value: eff.map { String(format: "%.1f %%", $0) })
                 Row(label: t("water_price"), value: water?["price_eur_m3"]?.doubleValue.map {
                     String(format: "%.2f €/m³", $0) })
+            }
+        }
+    }
+}
+
+/// La commune au sens CIVIL, et le nom qu'elle portait avant (#275).
+///
+/// Un acte ancien nomme parfois une commune qui n'existe plus. Et quand rien
+/// n'a bougé, le dire — daté et sourcé — vaut aussi la peine.
+///
+/// Les réserves de la source sont reprises, jamais résumées : répéter ses
+/// chiffres sans ses réserves affirmerait plus qu'elle.
+private struct CommuneSection: View {
+    let commune: JSONValue?
+    var body: some View {
+        if let nom = commune?["nom"]?.stringValue {
+            let code = commune?["code"]?.stringValue
+            let encore = commune?["existe_encore"]?.boolValue ?? true
+            let avant = commune?["precedent"]
+            let reserves = (commune?["limites"]?.arrayValue ?? []).compactMap { $0.stringValue }
+                + (commune?["non_etablis"]?.arrayValue ?? []).compactMap { $0["texte"]?.stringValue }
+            SectionBox(title: t("section_commune")) {
+                Row(label: t("commune_name"), value: code.map { "\(nom) (\($0))" } ?? nom)
+                Row(label: encore ? t("commune_since") : t("commune_ended"),
+                    value: commune?["depuis_fr"]?.stringValue)
+                if let n = avant?["nom"]?.stringValue {
+                    Row(label: t("commune_before"),
+                        value: avant?["jusqu_au_fr"]?.stringValue.map { "\(n), jusqu'au \($0)" } ?? n)
+                }
+                Row(label: t("commune_asof"), value: commune?["arret_des_donnees_fr"]?.stringValue)
+                if !reserves.isEmpty {
+                    Text(reserves.joined(separator: " "))
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
             }
         }
     }

@@ -56,7 +56,7 @@ class BuildingModel {
 
     companion object {
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
-            "official_dpe", "local_taxes", "schools", "prices", "rnb")
+            "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
@@ -68,7 +68,8 @@ class BuildingModel {
             "local_taxes" to R.string.block_taxes,
             "schools" to R.string.block_schools,
             "prices" to R.string.block_prices,
-            "rnb" to R.string.block_rnb)
+            "rnb" to R.string.block_rnb,
+            "commune" to R.string.block_commune)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -211,6 +212,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                         model.blocks["water_network"])
                     NeighbourhoodSection(model.blocks["local_taxes"], model.blocks["schools"],
                         model.blocks["prices"])
+                    CommuneSection(model.blocks["commune"])
                     Section(stringResource(R.string.section_ids)) {
                         Row(stringResource(R.string.id_rnb), model.blocks["rnb"].str("rnb_id"))
                         Row(stringResource(R.string.id_bdnb), b.str("bdnb_id"))
@@ -335,6 +337,39 @@ private fun Row(label: String, value: String?) {
         Text(label, color = Color.Gray, fontSize = 14.sp)
         Text(value, fontSize = 14.sp, modifier = Modifier.weight(1f),
             textAlign = androidx.compose.ui.text.style.TextAlign.End)
+    }
+}
+
+/**
+ * La commune au sens CIVIL, et le nom qu'elle portait avant (#275).
+ *
+ * Un acte ancien nomme parfois une commune qui n'existe plus. Et quand rien
+ * n'a bougé, le dire — daté et sourcé — vaut aussi la peine.
+ *
+ * Les réserves de la source sont reprises, jamais résumées : répéter ses
+ * chiffres sans ses réserves affirmerait plus qu'elle.
+ */
+@Composable
+private fun CommuneSection(commune: JsonElement?) {
+    val nom = commune.str("nom") ?: return
+    Section(stringResource(R.string.section_commune)) {
+        Row(stringResource(R.string.commune_name),
+            commune.str("code")?.let { "$nom ($it)" } ?: nom)
+        val encore = (commune.obj("existe_encore") as? JsonPrimitive)?.booleanOrNull ?: true
+        Row(stringResource(if (encore) R.string.commune_since else R.string.commune_ended),
+            commune.str("depuis_fr"))
+        val avant = commune.obj("precedent")
+        avant.str("nom")?.let { n ->
+            Row(stringResource(R.string.commune_before),
+                avant.str("jusqu_au_fr")?.let { "$n, jusqu'au $it" } ?: n)
+        }
+        Row(stringResource(R.string.commune_asof), commune.str("arret_des_donnees_fr"))
+        val reserves = commune.strings("limites") +
+            ((commune.obj("non_etablis") as? JsonArray)?.mapNotNull { it.str("texte") }
+                ?: emptyList())
+        if (reserves.isNotEmpty()) {
+            Text(reserves.joinToString(" "), fontSize = 11.sp, color = Color.Gray)
+        }
     }
 }
 

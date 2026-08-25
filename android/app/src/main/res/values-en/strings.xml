@@ -119,4 +119,11 @@
     <string name="unit_m2">%1$d m²</string>
     <string name="unit_eur_m2">%1$d €/m²</string>
     <string name="no_building_here">No building is described at this address in the national database (BDNB).</string>
+    <string name="block_commune">Commune (Confinia)</string>
+    <string name="section_commune">COMMUNE</string>
+    <string name="commune_name">Commune</string>
+    <string name="commune_since">Name and boundaries unchanged since</string>
+    <string name="commune_ended">Ceased to exist on</string>
+    <string name="commune_before">Previously</string>
+    <string name="commune_asof">Data as known on</string>
 </resources>
