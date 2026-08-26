@@ -133,4 +133,7 @@
     <string name="commune_ended">A cessé d\'exister le</string>
     <string name="commune_before">Auparavant</string>
     <string name="commune_asof">Données arrêtées au</string>
+    <string name="block_dpe_spread">DPE des logements (ADEME)</string>
+    <string name="dpe_spread_range">%1$d diagnostics à cette adresse : de %2$s à %3$s. La classe ci-dessus est celle du logement représentatif, pas celle de tous.</string>
+    <string name="dpe_spread_same">%1$d diagnostics à cette adresse, tous en %2$s.</string>
 </resources>

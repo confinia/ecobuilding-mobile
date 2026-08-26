@@ -107,3 +107,6 @@
 "commune_ended" = "A cessé d'exister le";
 "commune_before" = "Auparavant";
 "commune_asof" = "Données arrêtées au";
+"block_dpe_spread" = "DPE des logements (ADEME)";
+"dpe_spread_range" = "%1$d diagnostics à cette adresse : de %2$@ à %3$@. La classe ci-dessus est celle du logement représentatif, pas celle de tous.";
+"dpe_spread_same" = "%1$d diagnostics à cette adresse, tous en %2$@.";

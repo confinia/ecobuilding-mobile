@@ -31,13 +31,13 @@ final class BuildingModel: ObservableObject {
 
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
                            "official_dpe", "local_taxes", "schools", "prices", "rnb",
-                           "commune"]
+                           "commune", "dpe_spread"]
     static let labels = [
         "area_risks": "Risques", "groundwater": "Nappe phréatique",
         "solar_pv": "Solaire", "water_network": "Eau potable",
         "official_dpe": "DPE officiel", "local_taxes": "Fiscalité locale",
         "schools": "Écoles", "prices": "Prix de vente", "rnb": "ID-RNB",
-        "commune": t("block_commune"),
+        "commune": t("block_commune"), "dpe_spread": t("block_dpe_spread"),
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
@@ -123,7 +123,8 @@ struct BuildingSheet: View {
                 if let failure = model.failure {
                     Text(failure).foregroundStyle(.secondary)
                 } else if let b = model.building {
-                    EnergySection(building: b, officialDPE: model.blocks["official_dpe"])
+                    EnergySection(building: b, officialDPE: model.blocks["official_dpe"],
+                                  spread: model.blocks["dpe_spread"])
                     BuildingSection(building: b)
                     RisksSection(risks: model.blocks["area_risks"])
                     EnvironmentSection(groundwater: model.blocks["groundwater"],
@@ -203,20 +204,44 @@ private struct SectionBox<Content: View>: View {
 private struct EnergySection: View {
     let building: JSONValue
     let officialDPE: JSONValue?
+    var spread: JSONValue? = nil
 
     var body: some View {
         let energy = building["energy"]
         let cls = energy?["dpe_class"]?.stringValue
+        /* Le badge dit l'ÉVENTAIL quand les logements de l'immeuble diffèrent.
+         *
+         * Une grosse lettre colorée a l'air catégorique, et le lecteur pressé
+         * ne voit qu'elle. Mesuré : dès qu'une adresse porte plusieurs
+         * diagnostics, deux fois sur trois les classes diffèrent — la lettre
+         * affirmait donc une certitude fausse pour presque tous les logements. */
+        let basse = spread?["classe_min"]?.stringValue
+        let haute = spread?["classe_max"]?.stringValue
+        let identiques = spread?["identiques"]?.boolValue ?? true
+        let eventail = !identiques && basse != nil && haute != nil
         SectionBox(title: t("section_energy")) {
             HStack(spacing: 12) {
-                Text(cls ?? "?")
-                    .font(.title2.bold()).foregroundStyle(.white)
+                Text(eventail ? "\(basse!)–\(haute!)" : (cls ?? "?"))
+                    .font(eventail ? .caption.bold() : .title2.bold())
+                    .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(DPE.color(cls), in: RoundedRectangle(cornerRadius: 10))
+                    .background(
+                        eventail
+                            ? AnyShapeStyle(LinearGradient(
+                                colors: [DPE.color(basse), DPE.color(haute)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing))
+                            : AnyShapeStyle(DPE.color(cls)),
+                        in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 2) {
                     // Un « ? » nu n'explique rien : on dit ce qu'il signifie.
                     Text(cls.map { t("dpe_class", $0) } ?? t("dpe_missing"))
                         .font(.callout.weight(.medium))
+                    if eventail {
+                        Text(t("dpe_spread_range",
+                               Int(spread?["diagnostics"]?.doubleValue ?? 0),
+                               basse!, haute!))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                     if cls == nil {
                         Text(t("dpe_none_published"))
                             .font(.caption).foregroundStyle(.secondary)
