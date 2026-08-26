@@ -107,3 +107,6 @@
 "commune_ended" = "Ceased to exist on";
 "commune_before" = "Previously";
 "commune_asof" = "Data as known on";
+"block_dpe_spread" = "Dwelling EPCs (ADEME)";
+"dpe_spread_range" = "%1$d assessments at this address: from %2$@ to %3$@. The rating above is the building's representative dwelling, not every unit.";
+"dpe_spread_same" = "%1$d assessments at this address, all rated %2$@.";

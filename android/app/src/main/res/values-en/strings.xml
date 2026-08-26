@@ -126,4 +126,7 @@
     <string name="commune_ended">Ceased to exist on</string>
     <string name="commune_before">Previously</string>
     <string name="commune_asof">Data as known on</string>
+    <string name="block_dpe_spread">Dwelling EPCs (ADEME)</string>
+    <string name="dpe_spread_range">%1$d assessments at this address: from %2$s to %3$s. The rating above is the building\'s representative dwelling, not every unit.</string>
+    <string name="dpe_spread_same">%1$d assessments at this address, all rated %2$s.</string>
 </resources>

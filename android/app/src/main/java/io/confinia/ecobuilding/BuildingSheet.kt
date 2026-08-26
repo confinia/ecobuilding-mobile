@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,7 +57,8 @@ class BuildingModel {
 
     companion object {
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
-            "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune")
+            "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune",
+            "dpe_spread")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
@@ -69,7 +71,8 @@ class BuildingModel {
             "schools" to R.string.block_schools,
             "prices" to R.string.block_prices,
             "rnb" to R.string.block_rnb,
-            "commune" to R.string.block_commune)
+            "commune" to R.string.block_commune,
+            "dpe_spread" to R.string.block_dpe_spread)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -192,7 +195,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                 }
                 b == null -> CircularProgressIndicator()
                 else -> {
-                    EnergySection(b, model.blocks["official_dpe"])
+                    EnergySection(b, model.blocks["official_dpe"], model.blocks["dpe_spread"])
                     val plainPied = stringResource(R.string.single_storey)
                     Section(stringResource(R.string.section_building)) {
                         Row(stringResource(R.string.build_year), b.num("construction_year")?.toInt()?.toString())
@@ -279,15 +282,29 @@ private fun reopensIn(ctx: Context, iso: String?): String? {
 }
 
 @Composable
-private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
+private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: JsonElement? = null) {
     val energy = b["energy"]
     val cls = energy.str("dpe_class")
+    /* Le badge dit l'ÉVENTAIL quand les logements de l'immeuble diffèrent.
+     *
+     * Une grosse lettre colorée a l'air catégorique, et le lecteur pressé ne
+     * voit qu'elle. Mesuré : dès qu'une adresse porte plusieurs diagnostics,
+     * deux fois sur trois les classes diffèrent — la lettre affirmait donc une
+     * certitude fausse pour presque tous les logements. */
+    val basse = spread.str("classe_min")
+    val haute = spread.str("classe_max")
+    val identiques = (spread.obj("identiques") as? JsonPrimitive)?.booleanOrNull ?: true
+    val eventail = !identiques && basse != null && haute != null
     Section(stringResource(R.string.section_energy)) {
         Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(dpeColor(cls)),
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
+                    .then(if (eventail)
+                        Modifier.background(Brush.linearGradient(
+                            listOf(dpeColor(basse), dpeColor(haute))))
+                    else Modifier.background(dpeColor(cls))),
                 contentAlignment = Alignment.Center) {
-                Text(cls ?: "?", color = Color.White,
-                    fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(if (eventail) "$basse–$haute" else (cls ?: "?"), color = Color.White,
+                    fontSize = if (eventail) 13.sp else 20.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(12.dp))
             Column {
@@ -295,6 +312,11 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?) {
                 Text(cls?.let { stringResource(R.string.dpe_class, it) }
                         ?: stringResource(R.string.dpe_missing),
                     fontWeight = FontWeight.Medium)
+                if (eventail) {
+                    Text(stringResource(R.string.dpe_spread_range,
+                            (spread.num("diagnostics") ?: 0.0).toInt(), basse!!, haute!!),
+                        fontSize = 11.sp, color = Color.Gray)
+                }
                 if (cls == null) {
                     Text(stringResource(R.string.dpe_none_published),
                         fontSize = 12.sp, color = Color.Gray)
