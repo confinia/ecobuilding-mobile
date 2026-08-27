@@ -378,8 +378,11 @@ private fun CommuneSection(commune: JsonElement?) {
         Row(stringResource(R.string.commune_name),
             commune.str("code")?.let { "$nom ($it)" } ?: nom)
         val encore = (commune.obj("existe_encore") as? JsonPrimitive)?.booleanOrNull ?: true
+        // La date de FIN quand la commune a cessé d'exister, et non celle de
+        // début : la fiche annonçait « a cessé d'exister le 1ᵉʳ janvier 1870 »
+        // en affichant le commencement de la version.
         Row(stringResource(if (encore) R.string.commune_since else R.string.commune_ended),
-            commune.str("depuis_fr"))
+            commune.str(if (encore) "depuis_fr" else "jusqu_au_fr"))
         val avant = commune.obj("precedent")
         avant.str("nom")?.let { n ->
             Row(stringResource(R.string.commune_before),
