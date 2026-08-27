@@ -361,8 +361,11 @@ private struct CommuneSection: View {
                 + (commune?["non_etablis"]?.arrayValue ?? []).compactMap { $0["texte"]?.stringValue }
             SectionBox(title: t("section_commune")) {
                 Row(label: t("commune_name"), value: code.map { "\(nom) (\($0))" } ?? nom)
+                // La date de FIN quand la commune a cessé d'exister, et non
+                // celle de début : la fiche annonçait « a cessé d'exister le
+                // 1ᵉʳ janvier 1870 » en affichant le commencement de la version.
                 Row(label: encore ? t("commune_since") : t("commune_ended"),
-                    value: commune?["depuis_fr"]?.stringValue)
+                    value: commune?[encore ? "depuis_fr" : "jusqu_au_fr"]?.stringValue)
                 if let n = avant?["nom"]?.stringValue {
                     Row(label: t("commune_before"),
                         value: avant?["jusqu_au_fr"]?.stringValue.map { "\(n), jusqu'au \($0)" } ?? n)
