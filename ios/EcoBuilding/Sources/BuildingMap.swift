@@ -160,7 +160,13 @@ struct BuildingMap: UIViewRepresentable {
             context.coordinator.selectedLayer?.predicate = p
             context.coordinator.outlineLayer?.predicate = p
         }
-        guard let focus, CLLocationCoordinate2DIsValid(focus) else { return }
+        guard let focus, CLLocationCoordinate2DIsValid(focus) else {
+            // Fiche refermée : rendre le plein cadre à la carte.
+            if uiView.contentInset.bottom != 0 {
+                uiView.setContentInset(.zero, animated: true, completionHandler: nil)
+            }
+            return
+        }
         // Ne rejouer l'animation que si la cible a changé.
         let last = context.coordinator.lastFocus
         if let last, abs(last.latitude - focus.latitude) < 1e-7,
@@ -177,7 +183,14 @@ struct BuildingMap: UIViewRepresentable {
         uiView.fly(to: camera, withDuration: 1.6) {
             let close = MLNMapCamera(lookingAtCenter: focus, altitude: 320,
                                      pitch: BuildingMap.defaultPitch, heading: 0)
-            uiView.fly(to: close, withDuration: 1.4, completionHandler: nil)
+            // La fiche recouvre la moitié basse de l'écran : sans ce retrait,
+            // la plongée centrait le bâtiment... pile sous elle. Le décalage
+            // le pose dans le tiers haut, visible AU-DESSUS de sa fiche (#21).
+            let lift = UIEdgeInsets(top: 0, left: 0,
+                                    bottom: uiView.frame.height * 0.55, right: 0)
+            uiView.setCamera(close, withDuration: 1.4,
+                             animationTimingFunction: CAMediaTimingFunction(name: .easeInEaseOut),
+                             edgePadding: lift, completionHandler: nil)
         }
     }
 
