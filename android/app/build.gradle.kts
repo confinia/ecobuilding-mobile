@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Clé d'ENVOI Play (android/key.properties, jamais versionné — voir
+// .gitignore). Sans le fichier, la signature debug demeure : le poste d'un
+// contributeur compile sans détenir la clé du magasin.
+val cleEnvoi = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -18,10 +28,24 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+    signingConfigs {
+        if (cleEnvoi.isNotEmpty()) {
+            create("upload") {
+                storeFile = rootProject.file(cleEnvoi["storeFile"] as String)
+                storePassword = cleEnvoi["storePassword"] as String
+                keyAlias = cleEnvoi["keyAlias"] as String
+                keyPassword = cleEnvoi["keyPassword"] as String
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // Play refuse une signature debug : la clé d'envoi dès qu'elle
+            // est présente, debug sinon (poste sans secret).
+            signingConfig = if (cleEnvoi.isNotEmpty())
+                signingConfigs.getByName("upload")
+            else signingConfigs.getByName("debug")
         }
     }
     compileOptions {

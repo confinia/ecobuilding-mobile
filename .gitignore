@@ -24,3 +24,8 @@ android/.idea/
 android/keystore.properties
 
 .build/
+
+# Clé d'envoi Play — locale, jamais versionnée
+android/upload-keystore.jks
+android/key.properties
+ANDROID.local.md
