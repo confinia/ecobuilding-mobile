@@ -136,4 +136,6 @@
     <string name="block_dpe_spread">DPE des logements (ADEME)</string>
     <string name="dpe_spread_range">%1$d diagnostics à cette adresse : de %2$s à %3$s. La classe ci-dessus est celle du logement représentatif, pas celle de tous.</string>
     <string name="dpe_spread_same">%1$d diagnostics à cette adresse, tous en %2$s.</string>
+    <string name="unit_m2_txt">%1$s m²</string>
+    <string name="report_this_dwelling">Fiche de ce logement</string>
 </resources>

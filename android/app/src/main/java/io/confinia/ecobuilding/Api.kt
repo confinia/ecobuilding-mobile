@@ -195,9 +195,16 @@ object Api {
      * retomberait sur l'adresse IP — partagée par des milliers d'abonnés en
      * réseau mobile. La requête doit partir d'ici.
      */
-    suspend fun report(context: Context, id: String, lon: Double?, lat: Double?): java.io.File =
+    suspend fun report(context: Context, id: String, lon: Double?, lat: Double?,
+                       dpe: String? = null): java.io.File =
         withIo {
-            val query = if (lon != null && lat != null) "?lon=$lon&lat=$lat" else ""
+            // `dpe` : fiche d'UN logement (#22) — le serveur cible alors ce
+            // diagnostic (classe seule, interdiction de location recalculée).
+            val params = buildList {
+                if (lon != null && lat != null) { add("lon=$lon"); add("lat=$lat") }
+                if (dpe != null) add("dpe=$dpe")
+            }
+            val query = if (params.isEmpty()) "" else "?" + params.joinToString("&")
             val conn = open(context, "report/$id.pdf$query")
             if (conn.responseCode >= 400) {
                 val detail = conn.errorStream?.bufferedReader()?.use(BufferedReader::readText)
@@ -207,7 +214,7 @@ object Api {
             // lui qui autorise un lecteur externe à lire le fichier, sans rendre
             // le reste des données de l'app accessible.
             val dir = java.io.File(context.cacheDir, "reports").apply { mkdirs() }
-            val file = java.io.File(dir, "ecobuilding-$id.pdf")
+            val file = java.io.File(dir, "ecobuilding-$id${if (dpe != null) "-$dpe" else ""}.pdf")
             conn.inputStream.use { input -> file.outputStream().use { input.copyTo(it) } }
             file
         }

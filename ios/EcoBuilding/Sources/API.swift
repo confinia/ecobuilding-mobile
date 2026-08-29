@@ -169,12 +169,15 @@ enum API {
     /// mur payant, jamais afficher une erreur technique.
     struct QuotaExhausted: Error { let message: String }
 
-    static func report(buildingID: String, lon: Double?, lat: Double?) async throws -> URL {
+    static func report(buildingID: String, lon: Double?, lat: Double?,
+                       dpe: String? = nil) async throws -> URL {
         var query: [URLQueryItem] = []
         if let lon, let lat {
             query = [.init(name: "lon", value: String(lon)),
                      .init(name: "lat", value: String(lat))]
         }
+        // `dpe` : fiche d'UN logement (#22) — le serveur cible ce diagnostic.
+        if let dpe { query.append(.init(name: "dpe", value: dpe)) }
         let req = request("report/\(buildingID).pdf", query: query)
         let (tmp, response) = try await URLSession.shared.download(for: req)
         if let http = response as? HTTPURLResponse, http.statusCode == 429 {

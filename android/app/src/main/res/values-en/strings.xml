@@ -129,4 +129,6 @@
     <string name="block_dpe_spread">Dwelling EPCs (ADEME)</string>
     <string name="dpe_spread_range">%1$d assessments at this address: from %2$s to %3$s. The rating above is the building\'s representative dwelling, not every unit.</string>
     <string name="dpe_spread_same">%1$d assessments at this address, all rated %2$s.</string>
+    <string name="unit_m2_txt">%1$s m²</string>
+    <string name="report_this_dwelling">This home\'s report</string>
 </resources>

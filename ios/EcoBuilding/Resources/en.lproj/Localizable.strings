@@ -110,3 +110,5 @@
 "block_dpe_spread" = "Dwelling EPCs (ADEME)";
 "dpe_spread_range" = "%1$d assessments at this address: from %2$@ to %3$@. The rating above is the building's representative dwelling, not every unit.";
 "dpe_spread_same" = "%1$d assessments at this address, all rated %2$@.";
+"unit_m2_txt" = "%@ m²";
+"report_this_dwelling" = "This home's report";

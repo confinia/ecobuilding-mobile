@@ -8,6 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.ui.platform.LocalContext
+import java.io.File
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -195,7 +199,8 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                 }
                 b == null -> CircularProgressIndicator()
                 else -> {
-                    EnergySection(b, model.blocks["official_dpe"], model.blocks["dpe_spread"])
+                    EnergySection(b, model.blocks["official_dpe"], model.blocks["dpe_spread"],
+                        model = model, onReport = onReport)
                     val plainPied = stringResource(R.string.single_storey)
                     Section(stringResource(R.string.section_building)) {
                         Row(stringResource(R.string.build_year), b.num("construction_year")?.toInt()?.toString())
@@ -282,7 +287,8 @@ private fun reopensIn(ctx: Context, iso: String?): String? {
 }
 
 @Composable
-private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: JsonElement? = null) {
+private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: JsonElement? = null,
+                          model: BuildingModel? = null, onReport: (File) -> Unit = {}) {
     val energy = b["energy"]
     val cls = energy.str("dpe_class")
     /* Le badge dit l'ÉVENTAIL quand les logements de l'immeuble diffèrent.
@@ -334,8 +340,64 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: Json
         Row(stringResource(R.string.dpe_number), officialDpe.str("dpe_number"))
         Row(stringResource(R.string.living_area), officialDpe.num("surface_habitable_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) })
         Row(stringResource(R.string.annual_cost), officialDpe.num("annual_cost_eur")?.let { stringResource(R.string.unit_eur_year, it.toInt()) })
+
+        /* Les logements diagnostiqués, en lignes COMPACTES (#22) : classe,
+         * surface, coût — le détail complet vit dans la fiche PDF ciblée que
+         * le petit bouton va chercher (décision opérateur : « less info at
+         * first, and then all in PDF »). */
+        val logements = (spread as? JsonObject)?.get("logements") as? JsonArray
+        if (model != null && logements != null && logements.size >= 2) {
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            var enCours by remember { mutableStateOf<String?>(null) }
+            HorizontalDivider(Modifier.padding(vertical = 6.dp))
+            logements.forEach { el ->
+                val l = el as? JsonObject ?: return@forEach
+                val numero = l.str("numero_dpe") ?: return@forEach
+                val surface = l.num("surface_m2")
+                val cout = l.num("cout_annuel_eur")
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(22.dp).clip(RoundedCornerShape(5.dp))
+                            .background(dpeColor(l.str("classe"))),
+                        contentAlignment = Alignment.Center) {
+                        Text(l.str("classe") ?: "?", color = Color.White,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(listOfNotNull(
+                            surface?.let { stringResource(R.string.unit_m2_txt, fmtSurface(it)) },
+                            cout?.let { stringResource(R.string.unit_eur_year, it.toInt()) })
+                        .joinToString(" · "), fontSize = 13.sp)
+                    Spacer(Modifier.weight(1f))
+                    if (enCours == numero) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        IconButton(onClick = {
+                            val id = model.buildingId ?: return@IconButton
+                            enCours = numero
+                            scope.launch {
+                                runCatching {
+                                    Api.report(context, id, model.lon, model.lat, dpe = numero)
+                                }.onSuccess(onReport)
+                                enCours = null
+                            }
+                        }, enabled = enCours == null, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Filled.Description,
+                                contentDescription = stringResource(R.string.report_this_dwelling),
+                                tint = Color(0.17f, 0.48f, 0.29f))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
+/** 15.6 -> « 15,6 » ; 57.0 -> « 57 » : la surface telle qu'une annonce l'écrit. */
+private fun fmtSurface(m2: Double): String =
+    if (m2 == m2.toLong().toDouble()) m2.toLong().toString()
+    else "%.1f".format(m2).replace(".", ",")
 
 @Composable
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {

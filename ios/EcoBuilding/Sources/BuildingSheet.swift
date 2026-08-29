@@ -124,7 +124,7 @@ struct BuildingSheet: View {
                     Text(failure).foregroundStyle(.secondary)
                 } else if let b = model.building {
                     EnergySection(building: b, officialDPE: model.blocks["official_dpe"],
-                                  spread: model.blocks["dpe_spread"])
+                                  spread: model.blocks["dpe_spread"], model: model)
                     BuildingSection(building: b)
                     RisksSection(risks: model.blocks["area_risks"])
                     EnvironmentSection(groundwater: model.blocks["groundwater"],
@@ -205,6 +205,9 @@ private struct EnergySection: View {
     let building: JSONValue
     let officialDPE: JSONValue?
     var spread: JSONValue? = nil
+    var model: BuildingModel? = nil
+    @State private var enCours: String?
+    @State private var ficheLogement: URL?
 
     var body: some View {
         let energy = building["energy"]
@@ -261,7 +264,63 @@ private struct EnergySection: View {
                 value: officialDPE?["surface_habitable_m2"]?.doubleValue.map { t("unit_m2", Int($0)) })
             Row(label: t("annual_cost"),
                 value: officialDPE?["annual_cost_eur"]?.doubleValue.map { t("unit_eur_year", Int($0)) })
+
+            /* Les logements diagnostiqués, en lignes COMPACTES (#22) : classe,
+             * surface, coût — le détail complet vit dans la fiche PDF ciblée
+             * (décision opérateur : « less info at first, and then all in
+             * PDF »). */
+            if let model, let logements = spread?["logements"]?.arrayValue,
+               logements.count >= 2 {
+                Divider()
+                ForEach(Array(logements.enumerated()), id: \.offset) { _, l in
+                    if let numero = l["numero_dpe"]?.stringValue {
+                        HStack(spacing: 8) {
+                            Text(l["classe"]?.stringValue ?? "?")
+                                .font(.caption.bold()).foregroundStyle(.white)
+                                .frame(width: 22, height: 22)
+                                .background(DPE.color(l["classe"]?.stringValue),
+                                            in: RoundedRectangle(cornerRadius: 5))
+                            Text([l["surface_m2"]?.doubleValue.map { t("unit_m2_txt", Self.fmtSurface($0)) },
+                                  l["cout_annuel_eur"]?.doubleValue.map { t("unit_eur_year", Int($0)) }]
+                                .compactMap(\.self).joined(separator: " · "))
+                                .font(.footnote)
+                            Spacer()
+                            if enCours == numero {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Button {
+                                    telecharge(numero: numero, model: model)
+                                } label: {
+                                    Image(systemName: "doc.text")
+                                        .foregroundStyle(Color(red: 0.17, green: 0.48, blue: 0.29))
+                                }
+                                .disabled(enCours != nil)
+                                .accessibilityLabel(t("report_this_dwelling"))
+                            }
+                        }
+                    }
+                }
+            }
         }
+        .fullScreenCover(item: $ficheLogement) { url in PDFPreview(url: url) }
+    }
+
+    private func telecharge(numero: String, model: BuildingModel) {
+        guard let id = model.buildingID else { return }
+        enCours = numero
+        Task {
+            defer { enCours = nil }
+            if let url = try? await API.report(buildingID: id, lon: model.lon,
+                                               lat: model.lat, dpe: numero) {
+                ficheLogement = url
+            }
+        }
+    }
+
+    /// 15.6 -> « 15,6 » ; 57.0 -> « 57 » : la surface telle qu'une annonce l'écrit.
+    private static func fmtSurface(_ m2: Double) -> String {
+        m2 == m2.rounded() ? String(Int(m2))
+            : String(format: "%.1f", m2).replacingOccurrences(of: ".", with: ",")
     }
 }
 

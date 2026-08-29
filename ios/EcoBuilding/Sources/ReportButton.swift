@@ -124,7 +124,7 @@ struct ReportButton: View {
 /// trois étapes et une sortie de l'app pour voir ce qu'on vient de payer. Ici la
 /// fiche s'ouvre directement, et le bouton de partage du lecteur permet ensuite
 /// de l'envoyer à un client ou de l'enregistrer.
-private struct PDFPreview: View {
+struct PDFPreview: View {
     let url: URL
     @Environment(\.dismiss) private var dismiss
 
