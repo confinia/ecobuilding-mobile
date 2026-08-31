@@ -20,6 +20,6 @@ D'OÙ VIENNENT LES DONNÉES
 Des bases publiques de l'État français : base de données nationale des bâtiments, base adresse nationale, Géorisques, ADEME, DGFiP, IGN. Chaque source est citée dans la fiche PDF.
 
 SANS COMPTE, SANS PUBLICITÉ
-Aucune inscription. L'application s'ouvre sur la carte. Votre position sert uniquement à centrer la carte sur votre appareil : elle n'est jamais transmise à nos serveurs.
+Aucune inscription. L'application s'ouvre sur la carte. Votre position sert à centrer la carte et à classer les adresses proches : elle est envoyée à nos serveurs le temps de répondre, jamais conservée, jamais partagée. L'application fonctionne sans elle, en tapant une adresse.
 
 Les données publiques décrivent le bâtiment tel qu'il est déclaré. Elles peuvent être incomplètes ou anciennes : un diagnostic n'est pas toujours publié, et l'application le dit quand c'est le cas.
