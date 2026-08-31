@@ -83,6 +83,9 @@ object Api {
     private fun open(context: Context, path: String): HttpURLConnection =
         (URL("$BASE/$path").openConnection() as HttpURLConnection).apply {
             setRequestProperty("X-Install-Id", InstallId.get(context))
+            // L'application se NOMME (voir la note côté iOS) : sans en-tête
+            // propre, son usage se confondait avec le web dans les mesures.
+            setRequestProperty("User-Agent", "EcoBuilding-Android/" + BuildConfig.VERSION_NAME)
             connectTimeout = 15_000
             readTimeout = 120_000
         }

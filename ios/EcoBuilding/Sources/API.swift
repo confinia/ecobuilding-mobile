@@ -24,6 +24,11 @@ enum API {
         if !query.isEmpty { comps.queryItems = query }
         var req = URLRequest(url: comps.url!)
         req.setValue(InstallID.current, forHTTPHeaderField: "X-Install-Id")
+        // L'application se NOMME. Sans cela, elle sort avec l'en-tête par
+        // défaut d'URLSession : le serveur ne peut pas distinguer un usage de
+        // l'app d'un usage du web, et l'app n'existait dans aucune mesure.
+        req.setValue("EcoBuilding-iOS/" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"),
+                     forHTTPHeaderField: "User-Agent")
         return req
     }
 
