@@ -33,6 +33,11 @@ struct BuildingMap: UIViewRepresentable {
     var aerial: Bool = false
     /// Épingle posée sur le bâtiment concerné.
     var pin: CLLocationCoordinate2D?
+    /// Compteur incrémenté par le bouton « revenir à ma position » (#367).
+    /// La carte s'ouvre sur l'utilisateur mais relâche le suivi dès la
+    /// première plongée : sans ce bouton, une fois parti voir ailleurs, il
+    /// n'existait AUCUN chemin de retour vers l'endroit où l'on se tient.
+    var locateRequest: Int = 0
     /// Remonte la position de l'utilisateur dès qu'elle est connue : elle sert
     /// à classer les suggestions d'adresses par proximité.
     var onLocation: (CLLocationCoordinate2D) -> Void = { _ in }
@@ -160,6 +165,20 @@ struct BuildingMap: UIViewRepresentable {
             context.coordinator.selectedLayer?.predicate = p
             context.coordinator.outlineLayer?.predicate = p
         }
+        // Retour à ma position : on rejoue la plongée d'arrivée. Position du
+        // gestionnaire d'abord (la plus fraîche connue du système), celle de
+        // la carte en repli ; sans position valide, le bouton reste sans
+        // effet plutôt que d'envoyer la caméra sur (0, 0).
+        if context.coordinator.lastLocateRequest != locateRequest {
+            context.coordinator.lastLocateRequest = locateRequest
+            let fix = context.coordinator.locations.location?.coordinate
+                ?? uiView.userLocation?.coordinate
+            if let fix, CLLocationCoordinate2DIsValid(fix) {
+                uiView.setContentInset(.zero, animated: false, completionHandler: nil)
+                context.coordinator.diveTo(fix, on: uiView)
+                return
+            }
+        }
         guard let focus, CLLocationCoordinate2DIsValid(focus) else {
             // Fiche refermée : rendre le plein cadre à la carte.
             if uiView.contentInset.bottom != 0 {
@@ -211,6 +230,7 @@ struct BuildingMap: UIViewRepresentable {
         var pinAnnotation: MLNPointAnnotation?
         var lastFocus: CLLocationCoordinate2D?
         var lastHighlighted: String?
+        var lastLocateRequest = 0
         let onSelect: (String, CLLocationCoordinate2D) -> Void
         let onHighlight: (String?) -> Void
         /// Bâtiment désigné par le premier appui, en attente de confirmation.

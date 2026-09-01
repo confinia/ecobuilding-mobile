@@ -35,6 +35,8 @@ struct ContentView: View {
     @State private var here: CLLocationCoordinate2D?
     /// Fiche demandée par double appui : à lancer dès que le bâtiment répond.
     @State private var wantsReport = false
+    /// Incrémenté par le bouton « revenir à ma position » (#367).
+    @State private var locateRequest = 0
 
     /// « v1.0 (12) » : version publique et numéro de compilation, les deux
     /// étant nécessaires — la version publique bouge rarement, le numéro de
@@ -80,7 +82,8 @@ struct ContentView: View {
                    selection = .building(id: id, lon: coord.longitude, lat: coord.latitude)
                },
                focus: focus, highlighted: highlighted,
-               aerial: aerial, pin: pin, onLocation: { here = $0 })
+               aerial: aerial, pin: pin, locateRequest: locateRequest,
+               onLocation: { here = $0 })
             .ignoresSafeArea()
 
             // Bascule plan / photo aérienne. Placée en haut à droite, sous la
@@ -90,14 +93,32 @@ struct ContentView: View {
               VStack {
                 HStack {
                     Spacer()
-                    Button { aerial.toggle() } label: {
-                        Image(systemName: aerial ? "map.fill" : "globe.europe.africa.fill")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                            .background(.regularMaterial, in: Circle())
+                    VStack(spacing: 10) {
+                        Button { aerial.toggle() } label: {
+                            Image(systemName: aerial ? "map.fill" : "globe.europe.africa.fill")
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
+                                .background(.regularMaterial, in: Circle())
+                        }
+                        .accessibilityLabel(aerial ? t("show_plan") : t("show_aerial"))
+                        // Revenir là où l'on se tient (#367) : l'app s'ouvre sur
+                        // l'utilisateur, mais partir voir ailleurs était sans
+                        // retour. Fermer la fiche d'abord : revenir chez soi en
+                        // laissant ouverte la fiche d'un bâtiment d'ailleurs
+                        // ferait mentir l'écran.
+                        Button {
+                            selection = nil
+                            focus = nil
+                            locateRequest += 1
+                        } label: {
+                            Image(systemName: "location.fill")
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
+                                .background(.regularMaterial, in: Circle())
+                        }
+                        .accessibilityLabel(t("locate_me"))
                     }
                     .padding(.trailing, 12)
-                    .accessibilityLabel(aerial ? t("show_plan") : t("show_aerial"))
                 }
                 .padding(.top, 72)
                 Spacer()
