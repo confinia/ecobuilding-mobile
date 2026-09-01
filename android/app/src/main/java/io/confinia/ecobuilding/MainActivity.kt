@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -60,6 +61,8 @@ private fun Screen() {
     /** Fiche demandée par double appui : à lancer dès que le bâtiment répond. */
     var wantsReport by remember { mutableStateOf(false) }
     var located by remember { mutableStateOf(UserLocation.granted(context)) }
+    /** Compteur du bouton « revenir à ma position » (confinia/ecobuilding#367). */
+    var locate by remember { mutableStateOf(0) }
     /// Dernière position connue, gardée pour classer les suggestions par
     /// proximité — `focus` ne peut pas servir : il est remis à zéro après
     /// chaque vol de caméra.
@@ -95,7 +98,7 @@ private fun Screen() {
         BuildingMap(
             modifier = Modifier.fillMaxSize(),
             aerial = aerial, showUser = located, pin = pin,
-            highlighted = highlighted, focus = focus,
+            highlighted = highlighted, focus = focus, locate = locate,
             onArmed = { armed = it },
             onReportWanted = { id, point ->
                 armed = null; highlighted = id; focus = null; pin = point
@@ -110,13 +113,23 @@ private fun Screen() {
         // Bascule plan / photo, SOUS la recherche et masquée pendant la saisie :
         // elle recouvrait la suggestion la plus probable.
         if (suggestions.isEmpty()) {
-            Box(Modifier.align(Alignment.TopEnd).statusBarsPadding()
-                .padding(top = 84.dp, end = 12.dp)) {
+            Column(Modifier.align(Alignment.TopEnd).statusBarsPadding()
+                .padding(top = 84.dp, end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 FilledTonalIconButton(onClick = { aerial = !aerial },
                     modifier = Modifier.size(44.dp).clip(CircleShape)) {
                     Icon(if (aerial) Icons.Filled.Map else Icons.Filled.Public,
                         contentDescription = if (aerial) stringResource(R.string.show_plan)
                                              else stringResource(R.string.show_aerial))
+                }
+                // Revenir là où l'on se tient (confinia/ecobuilding#367) :
+                // fermer la fiche d'abord — garder ouverte celle d'un bâtiment
+                // d'ailleurs au-dessus de son propre quartier ferait mentir
+                // l'écran.
+                FilledTonalIconButton(onClick = { target = null; locate++ },
+                    modifier = Modifier.size(44.dp).clip(CircleShape)) {
+                    Icon(Icons.Filled.MyLocation,
+                        contentDescription = stringResource(R.string.locate_me))
                 }
             }
         }

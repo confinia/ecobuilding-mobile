@@ -9,6 +9,7 @@
     <string name="search_clear">Clear</string>
     <string name="show_aerial">Show aerial photo</string>
     <string name="show_plan">Show map</string>
+    <string name="locate_me">Back to my position</string>
     <string name="tap_again">Tap this building again to see its report</string>
     <string name="id_copied">Identifier copied</string>
 

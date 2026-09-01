@@ -7,6 +7,7 @@
     <string name="search_clear">Effacer</string>
     <string name="show_aerial">Afficher la photo aérienne</string>
     <string name="show_plan">Afficher le plan</string>
+    <string name="locate_me">Revenir à ma position</string>
     <string name="tap_again">Touchez à nouveau ce bâtiment pour voir sa fiche</string>
     <string name="id_copied">Identifiant copié</string>
 

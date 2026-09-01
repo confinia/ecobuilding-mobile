@@ -116,6 +116,11 @@ fun BuildingMap(
     pin: LatLng?,
     highlighted: String?,
     focus: LatLng?,
+    /** Compteur incrémenté par le bouton « revenir à ma position »
+     *  (confinia/ecobuilding#367) : la carte s'ouvre sur l'utilisateur mais
+     *  relâche la caméra aussitôt — sans ce bouton, partir voir ailleurs
+     *  était sans retour. */
+    locate: Int = 0,
     onArmed: (String?) -> Unit,
     onSelect: (String, LatLng) -> Unit,
     /** Double appui : on saute la fiche et on sort directement le document. */
@@ -213,6 +218,15 @@ fun BuildingMap(
                 state.lastFocus = focus
                 state.flyTo(map, focus)
             }
+            // Retour à ma position : on rejoue le vol d'arrivée sur le dernier
+            // point connu du composant de position. Sans position valide (refus,
+            // composant pas encore actif), le bouton reste sans effet — jamais
+            // de saut de caméra vers (0, 0).
+            if (locate != state.lastLocate) {
+                state.lastLocate = locate
+                runCatching { map.locationComponent.lastKnownLocation }.getOrNull()
+                    ?.let { fix -> state.flyTo(map, LatLng(fix.latitude, fix.longitude)) }
+            }
         },
     )
 }
@@ -224,6 +238,7 @@ private class MapState {
     var lastHighlighted: String? = null
     var lastFocus: LatLng? = null
     var lastPin: LatLng? = null
+    var lastLocate = 0
     /** Point dont la parcelle reste à retrouver, une fois les tuiles arrivées. */
     var parcelPending: LatLng? = null
     var userDotOn = false
