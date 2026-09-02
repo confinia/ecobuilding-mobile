@@ -206,6 +206,10 @@ object Api {
             val params = buildList {
                 if (lon != null && lat != null) { add("lon=$lon"); add("lat=$lat") }
                 if (dpe != null) add("dpe=$dpe")
+                // La fiche dans la langue de l'ÉCRAN (confinia/ecobuilding#370).
+                val langue = if (context.resources.configuration.locales[0]
+                        .language == "en") "en" else "fr"
+                add("lang=$langue")
             }
             val query = if (params.isEmpty()) "" else "?" + params.joinToString("&")
             val conn = open(context, "report/$id.pdf$query")

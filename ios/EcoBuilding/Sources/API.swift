@@ -183,6 +183,10 @@ enum API {
         }
         // `dpe` : fiche d'UN logement (#22) — le serveur cible ce diagnostic.
         if let dpe { query.append(.init(name: "dpe", value: dpe)) }
+        // La fiche dans la langue de l'ÉCRAN (confinia/ecobuilding#370) : une
+        // interface anglaise qui livre un document français se lit comme un bug.
+        let langue = Bundle.main.preferredLocalizations.first == "en" ? "en" : "fr"
+        query.append(.init(name: "lang", value: langue))
         let req = request("report/\(buildingID).pdf", query: query)
         let (tmp, response) = try await URLSession.shared.download(for: req)
         if let http = response as? HTTPURLResponse, http.statusCode == 429 {
