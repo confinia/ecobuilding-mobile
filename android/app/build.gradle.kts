@@ -16,7 +16,7 @@ val cleEnvoi = Properties().apply {
 
 android {
     namespace = "io.confinia.ecobuilding"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.confinia.ecobuilding"
@@ -24,8 +24,8 @@ android {
         // les appareils anciens, nos utilisateurs visitant des logements et non
         // des salons de la tech.
         minSdk = 26
-        targetSdk = 35
-        versionCode = 4
+        targetSdk = 36
+        versionCode = 5
         versionName = "1.0"
     }
     signingConfigs {
