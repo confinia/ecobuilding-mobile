@@ -22,6 +22,7 @@ import sys
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 PACKAGE = "io.confinia.ecobuilding"
@@ -78,8 +79,20 @@ def main() -> int:
     print(f"attached to track '{a.track}' as "
           f"{'a live release' if a.rollout else 'a draft'}")
 
-    edits.commit(packageName=PACKAGE, editId=edit).execute()
-    print("edit committed — visible in Play Console")
+    try:
+        edits.commit(packageName=PACKAGE, editId=edit).execute()
+        print("edit committed — visible in Play Console")
+    except HttpError as e:
+        # Play refuses to send some changes for review by API (seen on 1.1:
+        # a version bump while the listing is still in closed testing). The
+        # edit is still valid: commit it without the review request, which
+        # then has to be clicked in the console.
+        if "changesNotSentForReview" not in str(e):
+            raise
+        edits.commit(packageName=PACKAGE, editId=edit,
+                     changesNotSentForReview=True).execute()
+        print("edit committed WITHOUT review request — send it for review "
+              "from the Play Console (Publishing overview)")
     return 0
 
 
