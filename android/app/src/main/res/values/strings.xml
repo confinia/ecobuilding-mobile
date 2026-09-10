@@ -26,6 +26,17 @@
     <string name="dpe_missing">DPE non renseigné</string>
     <string name="dpe_none_published">Aucun diagnostic publié pour ce bâtiment</string>
     <string name="rental_ban">⚠ Location interdite à partir de %1$s (loi Climat et Résilience)</string>
+    <string name="rental_ban_since">⚠ Location interdite depuis le %1$s (loi Climat et Résilience)</string>
+    <string name="rental_ban_expired_note">Ce DPE étant périmé, seul un nouveau diagnostic fixera la classe opposable.</string>
+    <string name="no_rental_ban">✓ Aucune interdiction de location prévue pour la classe %1$s</string>
+    <string name="no_rental_ban_expired">✓ Aucune interdiction de location prévue pour la classe %1$s, sous réserve du nouveau DPE</string>
+    <!-- Validité : un DPE vaut dix ans ; ceux d'avant la réforme du 1er juillet
+         2021 sont tous périmés depuis le 1er janvier 2025. -->
+    <string name="dpe_valid_until">Valable jusqu\'au</string>
+    <string name="dpe_expired">DPE périmé</string>
+    <string name="dpe_expired_since">DPE périmé depuis le %1$s</string>
+    <string name="dpe_pre_reform">DPE d\'avant la réforme de juillet 2021, sans valeur depuis le 1er janvier 2025</string>
+    <string name="dpe_official_link">Consulter le DPE officiel (ADEME)</string>
     <string name="ghg">GES</string>
     <string name="dpe_date">Date du DPE</string>
     <string name="dpe_number">N° DPE officiel</string>
@@ -47,6 +58,24 @@
     <string name="risks_natural">Naturels</string>
     <string name="risks_techno">Technologiques</string>
     <string name="clay_hazard">Aléa retrait-gonflement</string>
+    <!-- PPRI : le zonage réglementaire inondation de la commune, quand il
+         existe. Bleue = constructible sous prescriptions, rouge = inconstructible. -->
+    <string name="ppri">Zonage inondation (PPRI)</string>
+    <string name="ppri_bleue">Zone bleue</string>
+    <string name="ppri_rouge">Zone rouge</string>
+    <string name="ppri_none">Hors zone</string>
+    <string name="ppri_regulation">Règlement du PPRI</string>
+    <string name="ppri_uncharted">Zone inondable (Géorisques), zonage PPRI non cartographié ici</string>
+
+    <!-- Urbanisme : la zone du PLU, depuis le Géoportail de l\'urbanisme. -->
+    <string name="section_urbanisme">Urbanisme (PLU)</string>
+    <string name="plu_zone">Zone</string>
+    <string name="plu_zone_type">Type</string>
+    <string name="plu_gpu_link">Voir sur le Géoportail de l\'urbanisme</string>
+    <string name="plu_type_U">Zone urbaine</string>
+    <string name="plu_type_AU">Zone à urbaniser</string>
+    <string name="plu_type_A">Zone agricole</string>
+    <string name="plu_type_N">Zone naturelle</string>
 
     <!-- Environnement et quartier -->
     <string name="section_environment">Environnement</string>
@@ -59,6 +88,9 @@
     <string name="property_tax">Taxe foncière (bâti)</string>
     <string name="waste_tax">Ordures ménagères</string>
     <string name="schools">Écoles à proximité</string>
+    <string name="last_sales">Dernières ventes (DVF)</string>
+    <string name="sale_line">%1$s · %2$s · %3$s</string>
+    <string name="unit_eur">%1$s €</string>
 
     <!-- Identifiants -->
     <string name="section_ids">Identifiants</string>
@@ -66,7 +98,8 @@
     <string name="id_bdnb">ID BDNB</string>
 
     <!-- Fiche PDF -->
-    <string name="get_report">Obtenir la fiche PDF</string>
+    <string name="get_report">Fiche EcoBuilding (PDF)</string>
+    <string name="not_the_dpe">Fiche d\'information EcoBuilding — ce document n\'est pas un diagnostic de performance énergétique (DPE).</string>
     <string name="stage_collect">Collecte des données…</string>
     <string name="stage_render">Rendu de la carte 3D…</string>
     <string name="stage_layout">Mise en page…</string>
@@ -96,6 +129,8 @@
     <string name="block_taxes">Fiscalité locale</string>
     <string name="block_schools">Écoles</string>
     <string name="block_prices">Prix de vente</string>
+    <string name="block_urbanisme">Urbanisme (PLU)</string>
+    <string name="block_ppri">PPRI</string>
     <string name="block_rnb">ID-RNB</string>
 
     <!-- Noms de risques Géorisques, traduits depuis la CLÉ MACHINE

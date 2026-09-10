@@ -25,6 +25,15 @@
     <string name="dpe_missing">No energy rating (DPE)</string>
     <string name="dpe_none_published">No survey published for this building</string>
     <string name="rental_ban">⚠ Letting banned from %1$s (French Climate and Resilience Act)</string>
+    <string name="rental_ban_since">⚠ Letting banned since %1$s (French Climate and Resilience Act)</string>
+    <string name="rental_ban_expired_note">This DPE has lapsed: only a new survey will set the enforceable class.</string>
+    <string name="no_rental_ban">✓ No letting ban planned for class %1$s</string>
+    <string name="no_rental_ban_expired">✓ No letting ban planned for class %1$s, pending a new DPE</string>
+    <string name="dpe_valid_until">Valid until</string>
+    <string name="dpe_expired">DPE lapsed</string>
+    <string name="dpe_expired_since">DPE lapsed since %1$s</string>
+    <string name="dpe_pre_reform">Pre-July 2021 DPE, void since 1 January 2025</string>
+    <string name="dpe_official_link">View the official DPE (ADEME)</string>
     <string name="ghg">Greenhouse gas</string>
     <string name="dpe_date">Survey date</string>
     <string name="dpe_number">Official DPE number</string>
@@ -44,6 +53,21 @@
     <string name="risks_natural">Natural</string>
     <string name="risks_techno">Industrial</string>
     <string name="clay_hazard">Clay shrink-swell hazard</string>
+    <string name="ppri">Flood zoning (PPRI)</string>
+    <string name="ppri_bleue">Blue zone</string>
+    <string name="ppri_rouge">Red zone</string>
+    <string name="ppri_none">Outside zoning</string>
+    <string name="ppri_regulation">PPRI regulation</string>
+    <string name="ppri_uncharted">Flood-prone area (Géorisques), PPRI zoning not mapped here</string>
+
+    <string name="section_urbanisme">Planning (PLU)</string>
+    <string name="plu_zone">Zone</string>
+    <string name="plu_zone_type">Type</string>
+    <string name="plu_gpu_link">Open on the Géoportail de l\'urbanisme</string>
+    <string name="plu_type_U">Urban zone</string>
+    <string name="plu_type_AU">Future urban zone</string>
+    <string name="plu_type_A">Agricultural zone</string>
+    <string name="plu_type_N">Natural zone</string>
 
     <string name="section_environment">Environment</string>
     <string name="groundwater">Groundwater depth</string>
@@ -55,12 +79,16 @@
     <string name="property_tax">Property tax (taxe foncière)</string>
     <string name="waste_tax">Household waste tax</string>
     <string name="schools">Schools nearby</string>
+    <string name="last_sales">Latest sales (DVF)</string>
+    <string name="sale_line">%1$s · %2$s · %3$s</string>
+    <string name="unit_eur">%1$s €</string>
 
     <string name="section_ids">Identifiers</string>
     <string name="id_rnb">RNB ID</string>
     <string name="id_bdnb">BDNB ID</string>
 
-    <string name="get_report">Get the PDF report</string>
+    <string name="get_report">EcoBuilding report (PDF)</string>
+    <string name="not_the_dpe">EcoBuilding information sheet — this document is not an energy performance certificate (DPE).</string>
     <string name="stage_collect">Gathering data…</string>
     <string name="stage_render">Rendering the 3D map…</string>
     <string name="stage_layout">Laying out…</string>
@@ -89,6 +117,8 @@
     <string name="block_taxes">Local taxes</string>
     <string name="block_schools">Schools</string>
     <string name="block_prices">Sale prices</string>
+    <string name="block_urbanisme">Planning (PLU)</string>
+    <string name="block_ppri">PPRI</string>
     <string name="block_rnb">RNB ID</string>
 
     <!-- Noms de risques Géorisques, traduits depuis la CLÉ MACHINE

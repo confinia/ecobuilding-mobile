@@ -60,9 +60,12 @@ class BuildingModel {
     val buildingId: String? get() = (building?.get("bdnb_id") as? JsonPrimitive)?.contentOrNull
 
     companion object {
+        // Les blocs que le serveur émet. `urbanisme` (PLU, #376) et `ppri`
+        // (#377) arrivaient déjà en 1.0 et étaient ignorés : l'app affichait
+        // moins que le web pour la même adresse.
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
             "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune",
-            "dpe_spread")
+            "dpe_spread", "urbanisme", "ppri")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
@@ -76,7 +79,9 @@ class BuildingModel {
             "prices" to R.string.block_prices,
             "rnb" to R.string.block_rnb,
             "commune" to R.string.block_commune,
-            "dpe_spread" to R.string.block_dpe_spread)
+            "dpe_spread" to R.string.block_dpe_spread,
+            "urbanisme" to R.string.block_urbanisme,
+            "ppri" to R.string.block_ppri)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -215,7 +220,8 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                         Row(stringResource(R.string.walls), b.str("wall_material")?.capitalize())
                         Row(stringResource(R.string.roof), b.str("roof_material")?.capitalize())
                     }
-                    RisksSection(model.blocks["area_risks"])
+                    RisksSection(model.blocks["area_risks"], model.blocks["ppri"])
+                    UrbanismeSection(model.blocks["urbanisme"], model.lon, model.lat)
                     EnvironmentSection(model.blocks["groundwater"], model.blocks["solar_pv"],
                         model.blocks["water_network"])
                     NeighbourhoodSection(model.blocks["local_taxes"], model.blocks["schools"],
@@ -301,13 +307,24 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: Json
     val haute = spread.str("classe_max")
     val identiques = (spread.obj("identiques") as? JsonPrimitive)?.booleanOrNull ?: true
     val eventail = !identiques && basse != null && haute != null
+    /* VALIDITÉ (confinia/ecobuilding#414) : un DPE vaut dix ans, et ceux
+     * d'avant la réforme du 1er juillet 2021 sont tous sans valeur depuis le
+     * 1er janvier 2025. Un DPE périmé garde sa lettre — c'est l'histoire du
+     * bâtiment — mais en GRIS : une lettre colorée affirme une classe
+     * opposable, et celle-ci ne l'est plus. Même règle que `dpe-validite.js`
+     * côté web ; les dates ISO se comparent comme des chaînes. */
+    val etabli = officialDpe.str("established_on") ?: energy.str("dpe_date")
+    val valable = officialDpe.str("valid_until") ?: energy.str("dpe_valid_until")
+    val aujourdhui = isoToday()
+    val avantReforme = etabli?.take(10)?.let { it < "2021-07-01" } ?: false
+    val perime = cls != null && (avantReforme || (valable?.take(10)?.let { it < aujourdhui } == true))
     Section(stringResource(R.string.section_energy)) {
         Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
                     .then(if (eventail)
                         Modifier.background(Brush.linearGradient(
                             listOf(dpeColor(basse), dpeColor(haute))))
-                    else Modifier.background(dpeColor(cls))),
+                    else Modifier.background(if (perime) Color(0.62f, 0.62f, 0.62f) else dpeColor(cls))),
                 contentAlignment = Alignment.Center) {
                 Text(if (eventail) "$basse–$haute" else (cls ?: "?"), color = Color.White,
                     fontSize = if (eventail) 13.sp else 20.sp, fontWeight = FontWeight.Bold)
@@ -318,6 +335,12 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: Json
                 Text(cls?.let { stringResource(R.string.dpe_class, it) }
                         ?: stringResource(R.string.dpe_missing),
                     fontWeight = FontWeight.Medium)
+                if (perime) {
+                    Text(if (avantReforme) stringResource(R.string.dpe_pre_reform)
+                         else valable?.let { stringResource(R.string.dpe_expired_since, fmtDate(it)) }
+                             ?: stringResource(R.string.dpe_expired),
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0.9f, 0.5f, 0.1f))
+                }
                 if (eventail) {
                     Text(stringResource(R.string.dpe_spread_range,
                             (spread.num("diagnostics") ?: 0.0).toInt(), basse!!, haute!!),
@@ -331,13 +354,31 @@ private fun EnergySection(b: JsonObject, officialDpe: JsonElement?, spread: Json
                 }
             }
         }
-        energy.obj("rental_ban").str("rental_ban_date")?.let {
-            Text(stringResource(R.string.rental_ban, it.take(4)),
+        /* L'interdiction de location au PASSÉ quand elle court déjà : « à
+         * partir du 2025-01-01 » lu en 2026 se comprend comme un futur. Et
+         * pour A–E, le dire POSITIVEMENT : le silence laissait croire qu'on
+         * n'avait pas regardé. */
+        val ban = energy.obj("rental_ban").str("rental_ban_date")
+        if (ban != null) {
+            val date = ban.take(10)
+            Text(if (date <= aujourdhui) stringResource(R.string.rental_ban_since, fmtDate(date))
+                 else stringResource(R.string.rental_ban, ban.take(4)),
                 color = Color(0.9f, 0.5f, 0.1f), fontSize = 14.sp)
+            if (perime) Text(stringResource(R.string.rental_ban_expired_note), fontSize = 12.sp, color = Color.Gray)
+        } else if (cls in listOf("A", "B", "C", "D", "E")) {
+            Text(stringResource(if (perime) R.string.no_rental_ban_expired else R.string.no_rental_ban, cls!!),
+                color = Color.Gray, fontSize = 14.sp)
         }
         Row(stringResource(R.string.ghg), energy.num("ghg_kgco2_m2y")?.let { stringResource(R.string.unit_ghg, it.toInt()) })
-        Row(stringResource(R.string.dpe_date), energy.str("dpe_date")?.take(10))
+        Row(stringResource(R.string.dpe_date), etabli?.let { fmtDate(it) })
+        Row(stringResource(R.string.dpe_valid_until), valable?.let { fmtDate(it) })
         Row(stringResource(R.string.dpe_number), officialDpe.str("dpe_number"))
+        // Le DPE OFFICIEL est chez l'ADEME (confinia/ecobuilding#418) : la
+        // fiche EcoBuilding n'en est pas un, et le lien par numéro y mène.
+        officialDpe.str("dpe_number")?.let {
+            LinkRow(stringResource(R.string.dpe_official_link),
+                "https://observatoire-dpe-audit.ademe.fr/afficher-dpe/$it")
+        }
         Row(stringResource(R.string.living_area), officialDpe.num("surface_habitable_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) })
         Row(stringResource(R.string.annual_cost), officialDpe.num("annual_cost_eur")?.let { stringResource(R.string.unit_eur_year, it.toInt()) })
 
@@ -461,17 +502,95 @@ private fun CommuneSection(commune: JsonElement?) {
 }
 
 @Composable
-private fun RisksSection(risks: JsonElement?) {
+private fun RisksSection(risks: JsonElement?, ppri: JsonElement? = null) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val natural = risks.strings("risques_naturels")
     val techno = risks.strings("risques_technologiques")
-    if (natural.isEmpty() && techno.isEmpty()) return
+    val codePpri = ppri.str("code")
+    val inondable = natural.any { it.lowercase().contains("inond") }
+    if (natural.isEmpty() && techno.isEmpty() && codePpri == null) return
     Section(stringResource(R.string.section_risks)) {
         if (natural.isNotEmpty()) Row(stringResource(R.string.risks_natural), natural.joinToString(", ") { humanize(ctx, it) })
         if (techno.isNotEmpty()) Row(stringResource(R.string.risks_techno), techno.joinToString(", ") { humanize(ctx, it) })
         Row(stringResource(R.string.clay_hazard), risks.str("clay_shrink_swell"))
+        /* Le zonage PPRI en BLEU / ROUGE (confinia/ecobuilding#377) : la
+         * couleur que l'agent cherche pendant une estimation. Sans PPRI
+         * cartographié mais en zone inondable selon Géorisques, on le dit
+         * sans inventer de couleur. */
+        if (codePpri != null) {
+            val couleur = ppri.str("couleur")
+            val libelle = when (couleur) {
+                "bleue" -> stringResource(R.string.ppri_bleue)
+                "rouge" -> stringResource(R.string.ppri_rouge)
+                else -> codePpri
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.ppri), color = Color.Gray, fontSize = 14.sp)
+                Text(libelle, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                    color = when (couleur) {
+                        "rouge" -> Color(0.84f, 0.13f, 0.12f)
+                        "bleue" -> Color(0.10f, 0.40f, 0.85f)
+                        else -> Color.Unspecified
+                    })
+            }
+            ppri.str("nom_ppr")?.let { Text(it, fontSize = 11.sp, color = Color.Gray) }
+            ppri.str("url_reglement")?.let { LinkRow(stringResource(R.string.ppri_regulation), it) }
+        } else if (inondable) {
+            Text(stringResource(R.string.ppri_uncharted), fontSize = 12.sp, color = Color.Gray)
+        }
     }
 }
+
+/**
+ * La zone du PLU (confinia/ecobuilding#376), depuis le Géoportail de
+ * l'Urbanisme. N'apparaît QUE si une zone numérisée couvre le point : une
+ * parcelle sans zone n'affiche rien, jamais « aucune contrainte ».
+ */
+@Composable
+private fun UrbanismeSection(plu: JsonElement?, lon: Double?, lat: Double?) {
+    val libelle = plu.str("libelle") ?: return
+    val long = plu.str("libelong")
+    val type = plu.str("typezone")
+    Section(stringResource(R.string.section_urbanisme)) {
+        Row(stringResource(R.string.plu_zone), if (long != null) "$libelle — $long" else libelle)
+        Row(stringResource(R.string.plu_zone_type), when (type) {
+            "U" -> stringResource(R.string.plu_type_U)
+            "AU" -> stringResource(R.string.plu_type_AU)
+            "A" -> stringResource(R.string.plu_type_A)
+            "N" -> stringResource(R.string.plu_type_N)
+            else -> null
+        })
+        if (lon != null && lat != null) {
+            LinkRow(stringResource(R.string.plu_gpu_link),
+                "https://www.geoportail-urbanisme.gouv.fr/map/#tile=1&lon=$lon&lat=$lat&zoom=18")
+        }
+    }
+}
+
+/** Un lien SORTANT, ouvert dans le navigateur : la source officielle, pas une copie. */
+@Composable
+private fun LinkRow(label: String, url: String) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    TextButton(onClick = {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+    }, contentPadding = PaddingValues(0.dp)) {
+        Text("$label ↗", fontSize = 14.sp)
+    }
+}
+
+/** « 2026-09-10 » : la forme dans laquelle le serveur écrit ses dates, et
+ *  dans laquelle elles se comparent. */
+private fun isoToday(): String =
+    java.time.LocalDate.now().toString()
+
+/** Une date ISO du serveur dans la langue du téléphone, ou telle quelle si
+ *  elle ne se lit pas. */
+private fun fmtDate(iso: String): String = try {
+    java.time.LocalDate.parse(iso.take(10))
+        .format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM))
+} catch (e: Exception) { iso.take(10) }
 
 /**
  * Les clés de Géorisques arrivent en langage machine
@@ -515,10 +634,22 @@ private fun EnvironmentSection(groundwater: JsonElement?, solar: JsonElement?, w
 @Composable
 private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, prices: JsonElement?) {
     val medians = prices.obj("commune_eur_m2") as? JsonObject ?: JsonObject(emptyMap())
+    // Les trois dernières VENTES du bâtiment (DVF), comme sur le web : la
+    // première chose qu'un agent demande (« vendu ? à quel prix ? »), et que
+    // les apps taisaient en n'affichant que les médianes communales.
+    val ventes = (prices.obj("sales") as? JsonArray)?.take(3) ?: emptyList()
     val nbSchools = (schools as? JsonArray)?.size ?: 0
     val tax = taxes.num("property_tax_built_pct")
-    if (medians.isEmpty() && nbSchools == 0 && tax == null) return
+    if (medians.isEmpty() && nbSchools == 0 && tax == null && ventes.isEmpty()) return
     Section(stringResource(R.string.section_area)) {
+        ventes.forEach { v ->
+            val prix = v.num("valeur_fonciere") ?: return@forEach
+            val quand = v.str("date")?.let { fmtDate(it) } ?: "?"
+            val type = v.str("type_local") ?: "?"
+            val surface = v.num("surface_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) } ?: "—"
+            Row(stringResource(R.string.sale_line, quand, type, surface),
+                stringResource(R.string.unit_eur, java.text.NumberFormat.getIntegerInstance().format(prix.toLong())))
+        }
         medians.keys.sorted().forEach { k ->
             Row(stringResource(R.string.median_price, k.lowercase()),
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })

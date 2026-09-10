@@ -1,0 +1,6 @@
+• DPE validity: expiry date, lapsed surveys flagged and greyed out, letting ban in the past tense once it applies, and "no ban planned" for classes A to E.
+• Direct link to the official DPE on the ADEME observatory.
+• Planning: the parcel's PLU zone (Géoportail de l'urbanisme).
+• Hazards: PPRI flood zoning, blue or red, with its regulation.
+• Neighbourhood: the building's last three sales (DVF), with price, type and floor area.
+• The server's message is shown when the report limit is reached.

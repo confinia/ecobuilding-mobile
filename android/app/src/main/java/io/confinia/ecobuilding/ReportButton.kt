@@ -123,6 +123,10 @@ fun ReportButton(model: BuildingModel, quota: Quota?, onQuotaChanged: (Quota?) -
                 color = if (error != null || quota?.reportsLeft == 0)
                     Color(0.9f, 0.5f, 0.1f) else Color.Gray)
         }
+        // Ce que la fiche N'EST PAS (confinia/ecobuilding#418) : le DPE
+        // officiel est chez l'ADEME, lié depuis la section Énergie. La phrase
+        // est la même que sur le web et dans le PDF.
+        Text(stringResource(R.string.not_the_dpe), fontSize = 11.sp, color = Color.Gray)
     }
 }
 

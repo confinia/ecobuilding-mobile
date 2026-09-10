@@ -1,0 +1,6 @@
+• Validité du DPE : date de fin, DPE périmé signalé et grisé, interdiction de location au passé quand elle court déjà, et « aucune interdiction prévue » pour les classes A à E.
+• Lien direct vers le DPE officiel sur l'observatoire de l'ADEME.
+• Urbanisme : la zone du PLU de la parcelle (Géoportail de l'urbanisme).
+• Risques : le zonage inondation du PPRI, en bleu ou en rouge, avec son règlement.
+• Quartier : les trois dernières ventes du bâtiment (DVF), avec prix, type et surface.
+• Le message du serveur s'affiche quand la limite de fiches est atteinte.

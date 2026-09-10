@@ -24,6 +24,10 @@ struct ReportButton: View {
     /// quarante-cinq secondes laisse croire que rien ne se passe — le
     /// mouvement est ce qui distingue « ça travaille » de « c'est bloqué ».
     @State private var spinning = false
+    /// Le message du SERVEUR quand la limite est atteinte. Android l'affichait
+    /// déjà ; iOS le jetait et montrait « impossible d'obtenir la fiche », ce qui
+    /// se lisait comme une panne.
+    @State private var refus: String?
 
     enum Phase: Equatable {
         case idle, running, failed
@@ -55,8 +59,9 @@ struct ReportButton: View {
             .disabled(phase == .running || model.buildingID == nil)
 
             if phase == .failed {
-                Text(t("report_failed"))
+                Text(refus ?? t("report_failed"))
                     .font(.footnote).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if let left = quota?.summary(for: model.buildingID) {
                 // Dire ce qu'il reste AVANT d'en manquer : on découvrait la
                 // limite en la heurtant. Aucun prix affiché tant que le mur
@@ -67,6 +72,12 @@ struct ReportButton: View {
                     .foregroundStyle(quota?.blocked == true ? .orange : .secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // Ce que la fiche N'EST PAS (confinia/ecobuilding#418) : le DPE
+            // officiel est chez l'ADEME, lié depuis la section Énergie. La
+            // phrase est la même que sur le web et dans le PDF.
+            Text(t("not_the_dpe"))
+                .font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         // PLEIN ÉCRAN, et non une feuille : la bande de carte laissée visible
         // en haut donnait à croire qu'on pouvait y revenir en la touchant, ce
@@ -97,6 +108,7 @@ struct ReportButton: View {
         guard let id = model.buildingID else { return }
         phase = .running
         spinning = true
+        refus = nil
         elapsed = 0
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in elapsed += 1 }
@@ -110,8 +122,10 @@ struct ReportButton: View {
                 pdf = url                       // ouvre le lecteur
                 quota = try? await API.quota()  // le solde vient de changer
             } catch {
+                refus = (error as? API.QuotaExhausted)?.message
                 phase = .failed
                 spinning = false
+                quota = try? await API.quota()  // le solde explique le refus
             }
         }
     }

@@ -29,15 +29,19 @@ final class BuildingModel: ObservableObject {
      * le cas de TOUTE l'outre-mer, où la BDNB n'a aucun bâtiment. */
     @Published var sansBatiment: String?
 
+    // Les blocs que le serveur émet (confinia/ecobuilding, `/v1/buildings/{id}/stream`).
+    // `urbanisme` (PLU, #376) et `ppri` (#377) arrivaient déjà en 1.0 et étaient
+    // ignorés : l'app affichait moins que le web pour la même adresse.
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
                            "official_dpe", "local_taxes", "schools", "prices", "rnb",
-                           "commune", "dpe_spread"]
+                           "commune", "dpe_spread", "urbanisme", "ppri"]
     static let labels = [
         "area_risks": "Risques", "groundwater": "Nappe phréatique",
         "solar_pv": "Solaire", "water_network": "Eau potable",
         "official_dpe": "DPE officiel", "local_taxes": "Fiscalité locale",
         "schools": "Écoles", "prices": "Prix de vente", "rnb": "ID-RNB",
         "commune": t("block_commune"), "dpe_spread": t("block_dpe_spread"),
+        "urbanisme": t("block_urbanisme"), "ppri": t("block_ppri"),
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
@@ -126,7 +130,8 @@ struct BuildingSheet: View {
                     EnergySection(building: b, officialDPE: model.blocks["official_dpe"],
                                   spread: model.blocks["dpe_spread"], model: model)
                     BuildingSection(building: b)
-                    RisksSection(risks: model.blocks["area_risks"])
+                    RisksSection(risks: model.blocks["area_risks"], ppri: model.blocks["ppri"])
+                    UrbanismeSection(plu: model.blocks["urbanisme"], lon: model.lon, lat: model.lat)
                     EnvironmentSection(groundwater: model.blocks["groundwater"],
                                        solar: model.blocks["solar_pv"],
                                        water: model.blocks["water_network"])
@@ -222,6 +227,17 @@ private struct EnergySection: View {
         let haute = spread?["classe_max"]?.stringValue
         let identiques = spread?["identiques"]?.boolValue ?? true
         let eventail = !identiques && basse != nil && haute != nil
+        /* VALIDITÉ (confinia/ecobuilding#414) : un DPE vaut dix ans, et ceux
+         * d'avant la réforme du 1er juillet 2021 sont tous sans valeur depuis
+         * le 1er janvier 2025. Un DPE périmé garde sa lettre — c'est l'histoire
+         * du bâtiment — mais en GRIS : une lettre colorée affirme une classe
+         * opposable, et celle-ci ne l'est plus. Même règle que `dpe-validite.js`
+         * côté web ; les dates ISO se comparent comme des chaînes. */
+        let etabli = officialDPE?["established_on"]?.stringValue ?? energy?["dpe_date"]?.stringValue
+        let valable = officialDPE?["valid_until"]?.stringValue ?? energy?["dpe_valid_until"]?.stringValue
+        let aujourdhui = Self.isoToday
+        let avantReforme = etabli.map { String($0.prefix(10)) < "2021-07-01" } ?? false
+        let perime = cls != nil && (avantReforme || valable.map { String($0.prefix(10)) < aujourdhui } == true)
         SectionBox(title: t("section_energy")) {
             HStack(spacing: 12) {
                 Text(eventail ? "\(basse!)–\(haute!)" : (cls ?? "?"))
@@ -235,10 +251,17 @@ private struct EnergySection: View {
                                 startPoint: .topLeading, endPoint: .bottomTrailing))
                             : AnyShapeStyle(DPE.color(cls)),
                         in: RoundedRectangle(cornerRadius: 10))
+                    .saturation(perime ? 0 : 1)
+                    .opacity(perime ? 0.55 : 1)
                 VStack(alignment: .leading, spacing: 2) {
                     // Un « ? » nu n'explique rien : on dit ce qu'il signifie.
                     Text(cls.map { t("dpe_class", $0) } ?? t("dpe_missing"))
                         .font(.callout.weight(.medium))
+                    if perime {
+                        Text(avantReforme ? t("dpe_pre_reform")
+                             : valable.map { t("dpe_expired_since", Self.fmtDate($0)) } ?? t("dpe_expired"))
+                            .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                    }
                     if eventail {
                         Text(t("dpe_spread_range",
                                Int(spread?["diagnostics"]?.doubleValue ?? 0),
@@ -253,13 +276,36 @@ private struct EnergySection: View {
                     }
                 }
             }
+            /* L'interdiction de location au PASSÉ quand elle court déjà : « à
+             * partir du 2025-01-01 » lu en 2026 se comprend comme un futur. Et
+             * pour A–E, le dire POSITIVEMENT : le silence laissait croire qu'on
+             * n'avait pas regardé. */
             if let ban = energy?["rental_ban"]?["rental_ban_date"]?.stringValue {
-                Text(t("rental_ban", String(ban.prefix(4))))
+                let date = String(ban.prefix(10))
+                Text(date <= aujourdhui ? t("rental_ban_since", Self.fmtDate(date))
+                                        : t("rental_ban", String(ban.prefix(4))))
                     .font(.callout).foregroundStyle(.orange)
+                if perime {
+                    Text(t("rental_ban_expired_note")).font(.caption).foregroundStyle(.secondary)
+                }
+            } else if let cls, ["A", "B", "C", "D", "E"].contains(cls) {
+                Text(t(perime ? "no_rental_ban_expired" : "no_rental_ban", cls))
+                    .font(.callout).foregroundStyle(.secondary)
             }
             Row(label: t("ghg"), value: energy?["ghg_kgco2_m2y"]?.doubleValue.map { t("unit_ghg", Int($0)) })
-            Row(label: t("dpe_date"), value: energy?["dpe_date"]?.stringValue.map { String($0.prefix(10)) })
+            Row(label: t("dpe_date"), value: etabli.map { Self.fmtDate($0) })
+            Row(label: t("dpe_valid_until"), value: valable.map { Self.fmtDate($0) })
             Row(label: t("dpe_number"), value: officialDPE?["dpe_number"]?.stringValue)
+            // Le DPE OFFICIEL est chez l'ADEME (confinia/ecobuilding#418) : la
+            // fiche EcoBuilding n'en est pas un, et le lien par numéro y mène
+            // sans recopier quoi que ce soit.
+            if let numero = officialDPE?["dpe_number"]?.stringValue,
+               let url = URL(string: "https://observatoire-dpe-audit.ademe.fr/afficher-dpe/\(numero)") {
+                Link(destination: url) {
+                    Label(t("dpe_official_link"), systemImage: "arrow.up.right.square")
+                        .font(.callout)
+                }
+            }
             Row(label: t("living_area"),
                 value: officialDPE?["surface_habitable_m2"]?.doubleValue.map { t("unit_m2", Int($0)) })
             Row(label: t("annual_cost"),
@@ -322,6 +368,28 @@ private struct EnergySection: View {
         m2 == m2.rounded() ? String(Int(m2))
             : String(format: "%.1f", m2).replacingOccurrences(of: ".", with: ",")
     }
+
+    /// « 2026-09-10 » : la forme dans laquelle le serveur écrit ses dates, et
+    /// dans laquelle elles se comparent.
+    static var isoToday: String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .iso8601)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    /// Une date ISO du serveur dans la langue de l'écran (« 5 sept. 2031 »),
+    /// ou telle quelle si elle ne se lit pas.
+    static func fmtDate(_ iso: String) -> String {
+        let jour = String(iso.prefix(10))
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .iso8601)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        guard let d = f.date(from: jour) else { return jour }
+        return DateFormatter.localizedString(from: d, dateStyle: .medium, timeStyle: .none)
+    }
 }
 
 private struct BuildingSection: View {
@@ -347,10 +415,13 @@ private struct BuildingSection: View {
 
 private struct RisksSection: View {
     let risks: JSONValue?
+    var ppri: JSONValue? = nil
     var body: some View {
         let natural = (risks?["risques_naturels"]?.arrayValue ?? []).compactMap { $0.stringValue }
         let techno = (risks?["risques_technologiques"]?.arrayValue ?? []).compactMap { $0.stringValue }
-        if !natural.isEmpty || !techno.isEmpty {
+        let codePPRI = ppri?["code"]?.stringValue
+        let inondable = natural.contains { $0.lowercased().contains("inond") }
+        if !natural.isEmpty || !techno.isEmpty || codePPRI != nil {
             SectionBox(title: t("section_risks")) {
                 if !natural.isEmpty {
                     Row(label: t("risks_natural"), value: natural.map(Self.humanize).joined(separator: ", "))
@@ -359,6 +430,33 @@ private struct RisksSection: View {
                     Row(label: t("risks_techno"), value: techno.map(Self.humanize).joined(separator: ", "))
                 }
                 Row(label: t("clay_hazard"), value: risks?["clay_shrink_swell"]?.stringValue)
+                /* Le zonage PPRI en BLEU / ROUGE (confinia/ecobuilding#377) : la
+                 * couleur que l'agent cherche pendant une estimation. Sans PPRI
+                 * cartographié mais en zone inondable selon Géorisques, on le dit
+                 * sans inventer de couleur. */
+                if let codePPRI {
+                    let couleur = ppri?["couleur"]?.stringValue
+                    let libelle = couleur == "bleue" ? t("ppri_bleue")
+                                : couleur == "rouge" ? t("ppri_rouge") : codePPRI
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(t("ppri")).foregroundStyle(.secondary)
+                        Spacer(minLength: 12)
+                        Text(libelle).fontWeight(.semibold)
+                            .foregroundStyle(couleur == "rouge" ? Color.red
+                                             : couleur == "bleue" ? Color.blue : Color.primary)
+                    }
+                    .font(.callout)
+                    if let nom = ppri?["nom_ppr"]?.stringValue {
+                        Text(nom).font(.caption2).foregroundStyle(.secondary)
+                    }
+                    if let lien = ppri?["url_reglement"]?.stringValue, let url = URL(string: lien) {
+                        Link(destination: url) {
+                            Label(t("ppri_regulation"), systemImage: "arrow.up.right.square").font(.callout)
+                        }
+                    }
+                } else if inondable {
+                    Text(t("ppri_uncharted")).font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -379,6 +477,32 @@ private struct RisksSection: View {
         let spaced = key.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2",
                                               options: .regularExpression)
         return spaced.prefix(1).uppercased() + spaced.dropFirst()
+    }
+}
+
+/// La zone du PLU (confinia/ecobuilding#376), depuis le Géoportail de
+/// l'Urbanisme. N'apparaît QUE si une zone numérisée couvre le point : une
+/// parcelle sans zone n'affiche rien, jamais « aucune contrainte ».
+private struct UrbanismeSection: View {
+    let plu: JSONValue?
+    var lon: Double? = nil
+    var lat: Double? = nil
+    var body: some View {
+        if let libelle = plu?["libelle"]?.stringValue {
+            let long = plu?["libelong"]?.stringValue
+            let type = plu?["typezone"]?.stringValue
+            SectionBox(title: t("section_urbanisme")) {
+                Row(label: t("plu_zone"), value: long.map { "\(libelle) — \($0)" } ?? libelle)
+                Row(label: t("plu_zone_type"),
+                    value: type.flatMap { ["U", "AU", "A", "N"].contains($0) ? t("plu_type_" + $0) : nil })
+                if let lon, let lat,
+                   let url = URL(string: "https://www.geoportail-urbanisme.gouv.fr/map/#tile=1&lon=\(lon)&lat=\(lat)&zoom=18") {
+                    Link(destination: url) {
+                        Label(t("plu_gpu_link"), systemImage: "arrow.up.right.square").font(.callout)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -445,10 +569,23 @@ private struct NeighbourhoodSection: View {
     let prices: JSONValue?
     var body: some View {
         let medians = prices?["commune_eur_m2"]?.objectValue ?? [:]
+        // Les trois dernières VENTES du bâtiment (DVF), comme sur le web : la
+        // première chose qu'un agent demande (« vendu ? à quel prix ? »), et
+        // que les apps taisaient en n'affichant que les médianes communales.
+        let ventes = Array((prices?["sales"]?.arrayValue ?? []).prefix(3))
         let nbSchools = schools?.arrayValue?.count ?? 0
         let tax = taxes?["property_tax_built_pct"]?.doubleValue
-        if !medians.isEmpty || nbSchools > 0 || tax != nil {
+        if !medians.isEmpty || nbSchools > 0 || tax != nil || !ventes.isEmpty {
             SectionBox(title: t("section_area")) {
+                ForEach(Array(ventes.enumerated()), id: \.offset) { _, v in
+                    if let prix = v["valeur_fonciere"]?.doubleValue {
+                        let quand = v["date"]?.stringValue.map { EnergySection.fmtDate($0) } ?? "?"
+                        let type = v["type_local"]?.stringValue ?? "?"
+                        let surface = v["surface_m2"]?.doubleValue.map { t("unit_m2", Int($0)) } ?? "—"
+                        Row(label: t("sale_line", quand, type, surface),
+                            value: t("unit_eur", Self.fmtEuros(prix)))
+                    }
+                }
                 ForEach(medians.keys.sorted(), id: \.self) { k in
                     Row(label: t("median_price", k.lowercased()),
                         value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
@@ -459,6 +596,14 @@ private struct NeighbourhoodSection: View {
                 Row(label: t("schools"), value: nbSchools > 0 ? "\(nbSchools)" : nil)
             }
         }
+    }
+
+    /// 345000 -> « 345 000 » (séparateur de la langue de l'écran).
+    private static func fmtEuros(_ v: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: v)) ?? String(Int(v))
     }
 }
 
