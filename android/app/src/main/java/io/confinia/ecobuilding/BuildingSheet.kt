@@ -654,13 +654,29 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
             Row(stringResource(R.string.median_price, k.lowercase()),
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
         }
-        Row(stringResource(R.string.property_tax), tax?.let { fmt("%.2f %%", it) })
-        Row(stringResource(R.string.waste_tax), taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
+        // Le taux voté seul ne parle à personne (#439) : d'abord la position
+        // parmi les communes de France, le taux en dessous.
+        Row(stringResource(R.string.property_tax), taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
+        Row(stringResource(R.string.waste_tax), taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
+        Row(stringResource(R.string.property_tax_rate), tax?.let { fmt("%.2f %%", it) })
+        Row(stringResource(R.string.waste_tax_rate), taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
         Row(stringResource(R.string.schools), if (nbSchools > 0) "$nbSchools" else null)
     }
 }
 
 /** Format FRANÇAIS : la virgule décimale, pas le point. */
+@Composable
+private fun taxHeadline(taxes: JsonElement?, levelKey: String, rankKey: String): String? {
+    val level = taxes.str(levelKey) ?: return null
+    val rank = taxes.num(rankKey) ?: return null
+    val word = when (level) {
+        "low" -> R.string.tax_level_low
+        "high" -> R.string.tax_level_high
+        else -> R.string.tax_level_average
+    }
+    return stringResource(R.string.tax_headline, stringResource(word), rank.toInt())
+}
+
 private fun fmt(pattern: String, value: Double): String =
     String.format(java.util.Locale.FRANCE, pattern, value)
 

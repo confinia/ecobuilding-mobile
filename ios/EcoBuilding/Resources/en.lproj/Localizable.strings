@@ -141,5 +141,11 @@
 "unit_solar" = "%lld kWh/yr per kWp";
 "walls" = "Walls";
 "waste_tax" = "Household waste tax";
+"property_tax_rate" = "Property tax (built land), voted rate";
+"waste_tax_rate" = "TEOM, voted rate";
+"tax_level_low" = "Moderate";
+"tax_level_average" = "Average";
+"tax_level_high" = "High";
+"tax_headline" = "%1$@ — higher than in %2$d %% of French municipalities";
 "water_efficiency" = "Water network efficiency";
 "water_price" = "Water price";

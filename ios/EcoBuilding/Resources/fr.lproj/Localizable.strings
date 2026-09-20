@@ -141,5 +141,11 @@
 "unit_solar" = "%lld kWh/an par kWc";
 "walls" = "Murs";
 "waste_tax" = "Ordures ménagères";
+"property_tax_rate" = "Taxe foncière (bâti), taux voté";
+"waste_tax_rate" = "TEOM, taux voté";
+"tax_level_low" = "Modérée";
+"tax_level_average" = "Dans la moyenne";
+"tax_level_high" = "Élevée";
+"tax_headline" = "%1$@ — plus haute que dans %2$d %% des communes";
 "water_efficiency" = "Rendement du réseau d'eau";
 "water_price" = "Prix de l'eau";

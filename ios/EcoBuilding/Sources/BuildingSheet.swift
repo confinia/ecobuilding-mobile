@@ -567,6 +567,12 @@ private struct NeighbourhoodSection: View {
     let taxes: JSONValue?
     let schools: JSONValue?
     let prices: JSONValue?
+    static func taxHeadline(_ taxes: JSONValue?, _ levelKey: String, _ rankKey: String) -> String? {
+        guard let level = taxes?[levelKey]?.stringValue,
+              let rank = taxes?[rankKey]?.doubleValue else { return nil }
+        return t("tax_headline", t("tax_level_" + level), Int(rank))
+    }
+
     var body: some View {
         let medians = prices?["commune_eur_m2"]?.objectValue ?? [:]
         // Les trois dernières VENTES du bâtiment (DVF), comme sur le web : la
@@ -590,8 +596,14 @@ private struct NeighbourhoodSection: View {
                     Row(label: t("median_price", k.lowercased()),
                         value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
                 }
-                Row(label: t("property_tax"), value: tax.map { String(format: "%.2f %%", $0) })
+                // Le taux voté seul ne parle à personne (#439) : d'abord la
+                // position parmi les communes de France, le taux en dessous.
+                Row(label: t("property_tax"),
+                    value: Self.taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
                 Row(label: t("waste_tax"),
+                    value: Self.taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
+                Row(label: t("property_tax_rate"), value: tax.map { String(format: "%.2f %%", $0) })
+                Row(label: t("waste_tax_rate"),
                     value: taxes?["waste_tax_pct"]?.doubleValue.map { String(format: "%.2f %%", $0) })
                 Row(label: t("schools"), value: nbSchools > 0 ? "\(nbSchools)" : nil)
             }

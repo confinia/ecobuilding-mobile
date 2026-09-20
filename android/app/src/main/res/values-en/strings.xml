@@ -78,6 +78,12 @@
     <string name="median_price">Median price (%1$s)</string>
     <string name="property_tax">Property tax (taxe foncière)</string>
     <string name="waste_tax">Household waste tax</string>
+    <string name="property_tax_rate">Property tax (built land), voted rate</string>
+    <string name="waste_tax_rate">TEOM, voted rate</string>
+    <string name="tax_level_low">Moderate</string>
+    <string name="tax_level_average">Average</string>
+    <string name="tax_level_high">High</string>
+    <string name="tax_headline">%1$s — higher than in %2$d %% of French municipalities</string>
     <string name="schools">Schools nearby</string>
     <string name="last_sales">Latest sales (DVF)</string>
     <string name="sale_line">%1$s · %2$s · %3$s</string>

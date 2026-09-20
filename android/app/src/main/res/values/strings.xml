@@ -87,6 +87,12 @@
     <string name="median_price">Prix médian (%1$s)</string>
     <string name="property_tax">Taxe foncière (bâti)</string>
     <string name="waste_tax">Ordures ménagères</string>
+    <string name="property_tax_rate">Taxe foncière (bâti), taux voté</string>
+    <string name="waste_tax_rate">TEOM, taux voté</string>
+    <string name="tax_level_low">Modérée</string>
+    <string name="tax_level_average">Dans la moyenne</string>
+    <string name="tax_level_high">Élevée</string>
+    <string name="tax_headline">%1$s — plus haute que dans %2$d %% des communes</string>
     <string name="schools">Écoles à proximité</string>
     <string name="last_sales">Dernières ventes (DVF)</string>
     <string name="sale_line">%1$s · %2$s · %3$s</string>
