@@ -70,7 +70,7 @@ final class JourneyTests: XCTestCase {
 
         // Le bouton PDF doit être là SANS avoir à faire défiler : c'est l'objet
         // vendu, et il tombait sous le pli côté Android.
-        let pdf = app.buttons["Obtenir la fiche PDF"].firstMatch
+        let pdf = app.buttons["Fiche EcoBuilding (PDF)"].firstMatch
         XCTAssertTrue(pdf.waitForExistence(timeout: 20), "bouton PDF absent")
         XCTAssertTrue(pdf.isHittable, "bouton PDF présent mais hors d'atteinte")
 
@@ -91,7 +91,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(suggestion.waitForExistence(timeout: 25))
         suggestion.tap()
 
-        let pdf = app.buttons["Obtenir la fiche PDF"].firstMatch
+        let pdf = app.buttons["Fiche EcoBuilding (PDF)"].firstMatch
         XCTAssertTrue(pdf.waitForExistence(timeout: 30))
         pdf.tap()
 

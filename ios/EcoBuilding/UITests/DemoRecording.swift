@@ -14,12 +14,12 @@ final class DemoRecording: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
+        // Apostrophe TYPOGRAPHIQUE dans « l’app » depuis iOS 26 : un libellé
+        // exact ne matche plus, la bulle restait à l'écran toute la vidéo.
         addUIInterruptionMonitor(withDescription: "Position") { alert in
-            for label in ["Allow While Using App",
-                          "Autoriser lorsque l'app est active"] {
-                let b = alert.buttons[label]
-                if b.exists { sleep(2); b.tap(); return true }
-            }
+            let b = alert.buttons.containing(NSPredicate(
+                format: "label BEGINSWITH 'Allow While' OR label BEGINSWITH 'Autoriser lorsque'")).firstMatch
+            if b.exists { sleep(2); b.tap(); return true }
             return false
         }
         app.tap()
@@ -39,7 +39,7 @@ final class DemoRecording: XCTestCase {
         sleep(2)
         suggestion.tap()
 
-        let pdf = app.buttons["Obtenir la fiche PDF"].firstMatch
+        let pdf = app.buttons["Fiche EcoBuilding (PDF)"].firstMatch
         XCTAssertTrue(pdf.waitForExistence(timeout: 30), "bouton PDF absent")
         sleep(3)
         app.swipeUp()                  // parcourir la fiche : les blocs DPE

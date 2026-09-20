@@ -30,7 +30,7 @@ final class EnglishCheck: XCTestCase {
         XCTAssertTrue(suggestion.waitForExistence(timeout: 25))
         suggestion.tap()
 
-        XCTAssertTrue(app.buttons["Get the PDF report"].firstMatch.waitForExistence(timeout: 30),
+        XCTAssertTrue(app.buttons["EcoBuilding report (PDF)"].firstMatch.waitForExistence(timeout: 30),
                       "le bouton PDF n'est pas en anglais")
         Thread.sleep(forTimeInterval: 6)
 

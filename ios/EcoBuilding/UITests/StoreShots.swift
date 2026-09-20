@@ -48,8 +48,8 @@ final class StoreShots: XCTestCase {
         suggestion.tap()
 
         // 1 — la fiche, remplie : c'est ce qu'on vient chercher.
-        let pdf = app.buttons[enAnglais ? "Get the PDF report"
-                                        : "Obtenir la fiche PDF"].firstMatch
+        let pdf = app.buttons[enAnglais ? "EcoBuilding report (PDF)"
+                                        : "Fiche EcoBuilding (PDF)"].firstMatch
         XCTAssertTrue(pdf.waitForExistence(timeout: 30), "fiche non ouverte")
         Thread.sleep(forTimeInterval: 6)          // laisser les neuf sources arriver
         shot(app, "1-fiche")
