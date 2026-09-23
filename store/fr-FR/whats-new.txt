@@ -1,6 +1,3 @@
-• Validité du DPE : date de fin, DPE périmé signalé et grisé, interdiction de location au passé quand elle court déjà, et « aucune interdiction prévue » pour les classes A à E.
-• Lien direct vers le DPE officiel sur l'observatoire de l'ADEME.
-• Urbanisme : la zone du PLU de la parcelle (Géoportail de l'urbanisme).
-• Risques : le zonage inondation du PPRI, en bleu ou en rouge, avec son règlement.
-• Quartier : les trois dernières ventes du bâtiment (DVF), avec prix, type et surface.
-• Le message du serveur s'affiche quand la limite de fiches est atteinte.
+• Année de construction avec sa source : Fichiers fonciers, période déclarée aux DPE, ou permis de construire (Sitadel) quand des travaux expliquent la date.
+• Fiscalité locale : la taxe foncière de la commune située par rapport à toutes les communes de France, avant les taux votés.
+• Interface entièrement en anglais quand l'appareil est en anglais : dates, historique de la commune, types de biens vendus.
