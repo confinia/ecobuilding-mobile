@@ -489,7 +489,7 @@ private fun CommuneSection(commune: JsonElement?) {
         val avant = commune.obj("precedent")
         avant.str("nom")?.let { n ->
             Row(stringResource(R.string.commune_before),
-                avant.str("jusqu_au_fr")?.let { "$n, jusqu'au $it" } ?: n)
+                avant.str("jusqu_au_fr")?.let { stringResource(R.string.commune_until, n, it) } ?: n)
         }
         Row(stringResource(R.string.commune_asof), commune.str("arret_des_donnees_fr"))
         val reserves = commune.strings("limites") +
@@ -645,13 +645,13 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
         ventes.forEach { v ->
             val prix = v.num("valeur_fonciere") ?: return@forEach
             val quand = v.str("date")?.let { fmtDate(it) } ?: "?"
-            val type = v.str("type_local") ?: "?"
+            val type = typeLocal(v.str("type_local"))
             val surface = v.num("surface_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) } ?: "—"
             Row(stringResource(R.string.sale_line, quand, type, surface),
                 stringResource(R.string.unit_eur, java.text.NumberFormat.getIntegerInstance().format(prix.toLong())))
         }
         medians.keys.sorted().forEach { k ->
-            Row(stringResource(R.string.median_price, k.lowercase()),
+            Row(stringResource(R.string.median_price, typeLocal(k).lowercase()),
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
         }
         // Le taux voté seul ne parle à personne (#439) : d'abord la position
@@ -665,6 +665,17 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
 }
 
 /** Format FRANÇAIS : la virgule décimale, pas le point. */
+/**
+ * DVF nomme le bien en français (« Appartement », « Maison ») ; l'écran anglais
+ * lisait « Median price (appartement) » (confinia/ecobuilding#450).
+ */
+@Composable
+private fun typeLocal(raw: String?): String = when (raw?.lowercase()) {
+    "appartement" -> stringResource(R.string.local_apartment)
+    "maison" -> stringResource(R.string.local_house)
+    else -> raw ?: "?"
+}
+
 @Composable
 private fun taxHeadline(taxes: JsonElement?, levelKey: String, rankKey: String): String? {
     val level = taxes.str(levelKey) ?: return null

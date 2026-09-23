@@ -89,8 +89,14 @@ enum API {
 
     /// Flux d'une recherche par adresse libre (ce que l'utilisateur a tapé).
     static func lookupStream(q: String) -> AsyncThrowingStream<StreamEvent, Error> {
-        stream(request("lookup/stream", query: [.init(name: "q", value: q)]))
+        stream(request("lookup/stream", query: [.init(name: "q", value: q), langItem]))
     }
+
+    /// La langue de l'ÉCRAN, envoyée avec chaque fiche (confinia/ecobuilding#450) :
+    /// le bloc commune arrive sinon en français (« 1ᵉʳ janvier 1943 » et ses
+    /// réserves) au milieu d'une interface anglaise.
+    static var langue: String { Bundle.main.preferredLocalizations.first == "en" ? "en" : "fr" }
+    private static var langItem: URLQueryItem { .init(name: "lang", value: langue) }
 
     /// Flux d'une suggestion CHOISIE : on tient déjà l'identifiant BAN et le
     /// point, inutile de refaire géocoder un libellé — et surtout, il ne faut
@@ -102,6 +108,7 @@ enum API {
             .init(name: "ban_id", value: banID),
             .init(name: "lon", value: String(lon)),
             .init(name: "lat", value: String(lat)),
+            langItem,
         ]))
     }
 
@@ -112,6 +119,7 @@ enum API {
         stream(request("buildings/\(id)/stream", query: [
             .init(name: "lon", value: String(lon)),
             .init(name: "lat", value: String(lat)),
+            langItem,
         ]))
     }
 
@@ -185,8 +193,7 @@ enum API {
         if let dpe { query.append(.init(name: "dpe", value: dpe)) }
         // La fiche dans la langue de l'ÉCRAN (confinia/ecobuilding#370) : une
         // interface anglaise qui livre un document français se lit comme un bug.
-        let langue = Bundle.main.preferredLocalizations.first == "en" ? "en" : "fr"
-        query.append(.init(name: "lang", value: langue))
+        query.append(langItem)
         let req = request("report/\(buildingID).pdf", query: query)
         let (tmp, response) = try await URLSession.shared.download(for: req)
         if let http = response as? HTTPURLResponse, http.statusCode == 429 {

@@ -75,6 +75,9 @@
     <string name="water_efficiency">Water network efficiency</string>
     <string name="water_price">Water price</string>
     <string name="section_area">Neighbourhood</string>
+    <string name="local_apartment">Apartment</string>
+    <string name="local_house">House</string>
+    <string name="commune_until">%1$s, until %2$s</string>
     <string name="median_price">Median price (%1$s)</string>
     <string name="property_tax">Property tax (taxe foncière)</string>
     <string name="waste_tax">Household waste tax</string>

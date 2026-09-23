@@ -52,6 +52,9 @@
 "living_area" = "Living area";
 "locate_me" = "Back to my position";
 "main_address" = "Building's main address: %@";
+"local_apartment" = "Apartment";
+"local_house" = "House";
+"commune_until" = "%1$@, until %2$@";
 "median_price" = "Median price (%@)";
 "no_building_here" = "No building is described at this address in the national database (BDNB).";
 "no_rental_ban" = "✓ No letting ban planned for class %@";

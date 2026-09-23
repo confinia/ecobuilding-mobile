@@ -84,6 +84,9 @@
     <string name="water_efficiency">Rendement du réseau d\'eau</string>
     <string name="water_price">Prix de l\'eau</string>
     <string name="section_area">Quartier</string>
+    <string name="local_apartment">Appartement</string>
+    <string name="local_house">Maison</string>
+    <string name="commune_until">%1$s, jusqu\'au %2$s</string>
     <string name="median_price">Prix médian (%1$s)</string>
     <string name="property_tax">Taxe foncière (bâti)</string>
     <string name="waste_tax">Ordures ménagères</string>

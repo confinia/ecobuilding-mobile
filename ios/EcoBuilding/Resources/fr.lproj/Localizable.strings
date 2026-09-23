@@ -52,6 +52,9 @@
 "living_area" = "Surface habitable";
 "locate_me" = "Revenir à ma position";
 "main_address" = "Adresse principale du bâtiment : %@";
+"local_apartment" = "Appartement";
+"local_house" = "Maison";
+"commune_until" = "%1$@, jusqu'au %2$@";
 "median_price" = "Prix médian (%@)";
 "no_building_here" = "Aucun bâtiment n'est décrit à cette adresse dans la base nationale (BDNB).";
 "no_rental_ban" = "✓ Aucune interdiction de location prévue pour la classe %@";

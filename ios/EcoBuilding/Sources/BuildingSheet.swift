@@ -551,7 +551,7 @@ private struct CommuneSection: View {
                     value: commune?[encore ? "depuis_fr" : "jusqu_au_fr"]?.stringValue)
                 if let n = avant?["nom"]?.stringValue {
                     Row(label: t("commune_before"),
-                        value: avant?["jusqu_au_fr"]?.stringValue.map { "\(n), jusqu'au \($0)" } ?? n)
+                        value: avant?["jusqu_au_fr"]?.stringValue.map { t("commune_until", n, $0) } ?? n)
                 }
                 Row(label: t("commune_asof"), value: commune?["arret_des_donnees_fr"]?.stringValue)
                 if !reserves.isEmpty {
@@ -567,6 +567,16 @@ private struct NeighbourhoodSection: View {
     let taxes: JSONValue?
     let schools: JSONValue?
     let prices: JSONValue?
+    /// DVF nomme le bien en français (« Appartement », « Maison ») ; l'écran
+    /// anglais lisait « Median price (appartement) » (confinia/ecobuilding#450).
+    static func typeLocal(_ raw: String?) -> String {
+        switch raw?.lowercased() {
+        case "appartement": return t("local_apartment")
+        case "maison": return t("local_house")
+        default: return raw ?? "?"
+        }
+    }
+
     static func taxHeadline(_ taxes: JSONValue?, _ levelKey: String, _ rankKey: String) -> String? {
         guard let level = taxes?[levelKey]?.stringValue,
               let rank = taxes?[rankKey]?.doubleValue else { return nil }
@@ -586,14 +596,14 @@ private struct NeighbourhoodSection: View {
                 ForEach(Array(ventes.enumerated()), id: \.offset) { _, v in
                     if let prix = v["valeur_fonciere"]?.doubleValue {
                         let quand = v["date"]?.stringValue.map { EnergySection.fmtDate($0) } ?? "?"
-                        let type = v["type_local"]?.stringValue ?? "?"
+                        let type = Self.typeLocal(v["type_local"]?.stringValue)
                         let surface = v["surface_m2"]?.doubleValue.map { t("unit_m2", Int($0)) } ?? "—"
                         Row(label: t("sale_line", quand, type, surface),
                             value: t("unit_eur", Self.fmtEuros(prix)))
                     }
                 }
                 ForEach(medians.keys.sorted(), id: \.self) { k in
-                    Row(label: t("median_price", k.lowercased()),
+                    Row(label: t("median_price", Self.typeLocal(k).lowercased()),
                         value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
                 }
                 // Le taux voté seul ne parle à personne (#439) : d'abord la

@@ -128,14 +128,22 @@ object Api {
      * que le bâtiment arrive, puis chaque bloc à son tour.
      */
     fun buildingStream(context: Context, id: String, lon: Double, lat: Double) =
-        stream(context, "buildings/$id/stream?lon=$lon&lat=$lat")
+        stream(context, "buildings/$id/stream?lon=$lon&lat=$lat&lang=${langue(context)}")
 
     fun lookupStream(context: Context, q: String) =
-        stream(context, "lookup/stream?q=${enc(q)}")
+        stream(context, "lookup/stream?q=${enc(q)}&lang=${langue(context)}")
 
     /** Suggestion CHOISIE : on tient déjà l'identifiant BAN et le point. */
     fun lookupStream(context: Context, banId: String, lon: Double, lat: Double) =
-        stream(context, "lookup/stream?ban_id=${enc(banId)}&lon=$lon&lat=$lat")
+        stream(context, "lookup/stream?ban_id=${enc(banId)}&lon=$lon&lat=$lat&lang=${langue(context)}")
+
+    /**
+     * La langue de l'ÉCRAN, envoyée avec chaque fiche (confinia/ecobuilding#450) :
+     * le bloc commune arrive sinon en français (« 1ᵉʳ janvier 1943 » et ses
+     * réserves) au milieu d'une interface anglaise.
+     */
+    fun langue(context: Context): String =
+        if (context.resources.configuration.locales[0].language == "en") "en" else "fr"
 
     private fun stream(context: Context, path: String): Flow<StreamEvent> = flow {
         val conn = open(context, path)
@@ -207,9 +215,7 @@ object Api {
                 if (lon != null && lat != null) { add("lon=$lon"); add("lat=$lat") }
                 if (dpe != null) add("dpe=$dpe")
                 // La fiche dans la langue de l'ÉCRAN (confinia/ecobuilding#370).
-                val langue = if (context.resources.configuration.locales[0]
-                        .language == "en") "en" else "fr"
-                add("lang=$langue")
+                add("lang=${langue(context)}")
             }
             val query = if (params.isEmpty()) "" else "?" + params.joinToString("&")
             val conn = open(context, "report/$id.pdf$query")
