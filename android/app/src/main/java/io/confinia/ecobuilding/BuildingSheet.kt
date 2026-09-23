@@ -65,7 +65,7 @@ class BuildingModel {
         // moins que le web pour la même adresse.
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
             "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune",
-            "dpe_spread", "urbanisme", "ppri")
+            "dpe_spread", "urbanisme", "ppri", "construction")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
@@ -81,7 +81,8 @@ class BuildingModel {
             "commune" to R.string.block_commune,
             "dpe_spread" to R.string.block_dpe_spread,
             "urbanisme" to R.string.block_urbanisme,
-            "ppri" to R.string.block_ppri)
+            "ppri" to R.string.block_ppri,
+            "construction" to R.string.block_construction)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -208,7 +209,7 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                         model = model, onReport = onReport)
                     val plainPied = stringResource(R.string.single_storey)
                     Section(stringResource(R.string.section_building)) {
-                        Row(stringResource(R.string.build_year), b.num("construction_year")?.toInt()?.toString())
+                        ConstructionRows(b, model.blocks["construction"])
                         Row(stringResource(R.string.height), b.num("height_m")?.let { stringResource(R.string.unit_metres, it.toInt()) })
                         // « Niveaux » et non « Étages » : en français, « 1 étage »
                         // se comprend comme rez-de-chaussée + 1. Et à un seul
@@ -665,6 +666,41 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
 }
 
 /** Format FRANÇAIS : la virgule décimale, pas le point. */
+/**
+ * L'année vient des Fichiers fonciers, au niveau de la PARCELLE : une extension
+ * déclarée la remplace (confinia/ecobuilding#432). On dit d'où elle vient, ce
+ * que disent les diagnostiqueurs, et le permis quand c'est lui qui explique
+ * l'écart.
+ */
+@Composable
+private fun ConstructionRows(b: JsonElement, c: JsonElement?) {
+    val annee = c.num("year")?.toInt() ?: b.num("construction_year")?.toInt()
+    Row(stringResource(R.string.build_year),
+        annee?.let { if (c == null) it.toString() else stringResource(R.string.build_year_ffo, it.toString()) })
+    val dpe = (c.obj("dpe_years") as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull?.toInt() }
+    val caveat = c.str("caveat")
+    if (dpe != null && dpe.size == 2) {
+        val span = if (dpe[0] == dpe[1]) (c.str("dpe_period") ?: dpe[0].toString()) else "${dpe[0]}–${dpe[1]}"
+        val n = c.num("dpe_count")?.toInt() ?: 0
+        val qui = if (n > 1) stringResource(R.string.build_dpe_n, n) else stringResource(R.string.build_dpe_one)
+        Row(stringResource(R.string.build_dpe_period),
+            if (caveat == "dpe_disagrees") stringResource(R.string.build_dpe_disagrees, span, qui) else "$span ($qui)")
+    }
+    val permis = c.obj("permit")
+    val premiere = permis.num("first_year")?.toInt()
+    val depuis = c.num("works_since")?.toInt()
+    if (caveat == "works" && premiere != null) {
+        val kind = when {
+            (permis.obj("raised") as? JsonPrimitive)?.booleanOrNull == true -> stringResource(R.string.build_works_raised)
+            (permis.obj("extension") as? JsonPrimitive)?.booleanOrNull == true -> stringResource(R.string.build_works_extension)
+            else -> stringResource(R.string.build_works_existing)
+        }
+        Text(stringResource(R.string.build_works_caveat, kind, premiere.toString()), fontSize = 11.sp, color = Color.Gray)
+    } else if (depuis != null) {
+        Row(stringResource(R.string.build_permit), stringResource(R.string.build_works_since, depuis.toString()))
+    }
+}
+
 /**
  * DVF nomme le bien en français (« Appartement », « Maison ») ; l'écran anglais
  * lisait « Median price (appartement) » (confinia/ecobuilding#450).

@@ -45,6 +45,18 @@
 
     <!-- Bâtiment -->
     <string name="section_building">Bâtiment</string>
+    <string name="block_construction">Année de construction</string>
+    <string name="build_year_ffo">%1$s (Fichiers fonciers, DGFiP)</string>
+    <string name="build_dpe_period">Période de construction déclarée aux DPE</string>
+    <string name="build_dpe_n">selon %1$d diagnostics</string>
+    <string name="build_dpe_one">selon le diagnostiqueur</string>
+    <string name="build_dpe_disagrees">%1$s (%2$s) — en désaccord avec les Fichiers fonciers</string>
+    <string name="build_works_raised">Une surélévation déclarée</string>
+    <string name="build_works_extension">Une extension déclarée</string>
+    <string name="build_works_existing">Des travaux sur l\'existant déclarés</string>
+    <string name="build_works_caveat">%1$s en %2$s (permis Sitadel) : l\'année ci-dessus peut être celle des travaux, pas du bâtiment d\'origine.</string>
+    <string name="build_permit">Permis de construire (Sitadel)</string>
+    <string name="build_works_since">Travaux déclarés en %1$s</string>
     <string name="build_year">Année de construction</string>
     <string name="height">Hauteur</string>
     <string name="levels">Niveaux</string>

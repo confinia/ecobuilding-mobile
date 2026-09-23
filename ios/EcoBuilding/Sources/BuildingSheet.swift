@@ -34,7 +34,7 @@ final class BuildingModel: ObservableObject {
     // ignorés : l'app affichait moins que le web pour la même adresse.
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
                            "official_dpe", "local_taxes", "schools", "prices", "rnb",
-                           "commune", "dpe_spread", "urbanisme", "ppri"]
+                           "commune", "dpe_spread", "urbanisme", "ppri", "construction"]
     static let labels = [
         "area_risks": "Risques", "groundwater": "Nappe phréatique",
         "solar_pv": "Solaire", "water_network": "Eau potable",
@@ -42,6 +42,7 @@ final class BuildingModel: ObservableObject {
         "schools": "Écoles", "prices": "Prix de vente", "rnb": "ID-RNB",
         "commune": t("block_commune"), "dpe_spread": t("block_dpe_spread"),
         "urbanisme": t("block_urbanisme"), "ppri": t("block_ppri"),
+        "construction": t("block_construction"),
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
@@ -129,7 +130,7 @@ struct BuildingSheet: View {
                 } else if let b = model.building {
                     EnergySection(building: b, officialDPE: model.blocks["official_dpe"],
                                   spread: model.blocks["dpe_spread"], model: model)
-                    BuildingSection(building: b)
+                    BuildingSection(building: b, construction: model.blocks["construction"])
                     RisksSection(risks: model.blocks["area_risks"], ppri: model.blocks["ppri"])
                     UrbanismeSection(plu: model.blocks["urbanisme"], lon: model.lon, lat: model.lat)
                     EnvironmentSection(groundwater: model.blocks["groundwater"],
@@ -394,9 +395,38 @@ private struct EnergySection: View {
 
 private struct BuildingSection: View {
     let building: JSONValue
+    var construction: JSONValue?
     var body: some View {
+        // L'année vient des Fichiers fonciers, au niveau de la PARCELLE : une
+        // extension déclarée la remplace (confinia/ecobuilding#432). On dit
+        // d'où elle vient, ce que disent les diagnostiqueurs, et le permis
+        // quand c'est lui qui explique l'écart.
+        let c = construction
+        let annee = c?["year"]?.intValue ?? building["construction_year"]?.intValue
+        let dpeAnnees = c?["dpe_years"]?.arrayValue?.compactMap { $0.intValue } ?? []
+        let permis = c?["permit"]
+        let caveat = c?["caveat"]?.stringValue
         SectionBox(title: t("section_building")) {
-            Row(label: t("build_year"), value: building["construction_year"]?.intValue.map(String.init))
+            Row(label: t("build_year"),
+                value: annee.map { c == nil ? String($0) : t("build_year_ffo", String($0)) })
+            if dpeAnnees.count == 2 {
+                let span = dpeAnnees[0] == dpeAnnees[1]
+                    ? (c?["dpe_period"]?.stringValue ?? String(dpeAnnees[0]))
+                    : "\(dpeAnnees[0])–\(dpeAnnees[1])"
+                let n = c?["dpe_count"]?.intValue ?? 0
+                let qui = n > 1 ? t("build_dpe_n", n) : t("build_dpe_one")
+                Row(label: t("build_dpe_period"),
+                    value: caveat == "dpe_disagrees" ? t("build_dpe_disagrees", span, qui) : "\(span) (\(qui))")
+            }
+            if caveat == "works", let y = permis?["first_year"]?.intValue {
+                let kind = (permis?["raised"]?.boolValue ?? false) ? t("build_works_raised")
+                    : (permis?["extension"]?.boolValue ?? false) ? t("build_works_extension")
+                    : t("build_works_existing")
+                Text(t("build_works_caveat", kind, String(y)))
+                    .font(.caption2).foregroundStyle(.secondary)
+            } else if let y = c?["works_since"]?.intValue {
+                Row(label: t("build_permit"), value: t("build_works_since", String(y)))
+            }
             Row(label: t("height"), value: building["height_m"]?.doubleValue.map { t("unit_metres", Int($0)) })
             // « Niveaux » et non « Étages » : en français, « 1 étage » se
             // comprend comme rez-de-chaussée + 1, alors que la BDNB compte des

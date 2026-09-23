@@ -41,6 +41,18 @@
     <string name="annual_cost">Estimated yearly energy cost</string>
 
     <string name="section_building">Building</string>
+    <string name="block_construction">Year built</string>
+    <string name="build_year_ffo">%1$s (cadastral files, DGFiP)</string>
+    <string name="build_dpe_period">Construction period stated on the EPCs</string>
+    <string name="build_dpe_n">per %1$d energy audits</string>
+    <string name="build_dpe_one">per the energy auditor</string>
+    <string name="build_dpe_disagrees">%1$s (%2$s) — disagrees with the cadastral files</string>
+    <string name="build_works_raised">A raised storey filed</string>
+    <string name="build_works_extension">An extension filed</string>
+    <string name="build_works_existing">Works on the existing building filed</string>
+    <string name="build_works_caveat">%1$s in %2$s (Sitadel permit): the year above may be that of the works, not of the original building.</string>
+    <string name="build_permit">Building permit (Sitadel)</string>
+    <string name="build_works_since">Works filed in %1$s</string>
     <string name="build_year">Year built</string>
     <string name="height">Height</string>
     <string name="levels">Storeys</string>
