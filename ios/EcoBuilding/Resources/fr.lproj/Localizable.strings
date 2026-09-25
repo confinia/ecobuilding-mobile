@@ -87,7 +87,7 @@
 "ppri_regulation" = "Règlement du PPRI";
 "ppri_rouge" = "Zone rouge";
 "ppri_uncharted" = "Zone inondable (Géorisques), zonage PPRI non cartographié ici";
-"property_tax" = "Taxe foncière (bâti)";
+"property_tax" = "Taxe foncière";
 "quota_cached" = "Fiche déjà obtenue aujourd'hui — nouveau téléchargement gratuit";
 "quota_full" = "%1$lld/%1$lld";
 "quota_month" = "ce mois-ci";
@@ -156,8 +156,9 @@
 "unit_solar" = "%lld kWh/an par kWc";
 "walls" = "Murs";
 "waste_tax" = "Ordures ménagères";
-"property_tax_rate" = "Taxe foncière (bâti), taux voté";
-"waste_tax_rate" = "TEOM, taux voté";
+"tax_mean" = "environ %1$@ €/an";
+"tax_mean_note" = "Moyennes par avis de taxe foncière dans la commune (DGFiP, REI %1$@) : un ordre de grandeur, pas le montant dû pour ce logement, qui dépend de sa valeur locative cadastrale.";
+"tax_mean_rank" = "Taxe foncière plus élevée que dans %1$d %% des communes.";
 "tax_level_low" = "Modérée";
 "tax_level_average" = "Dans la moyenne";
 "tax_level_high" = "Élevée";

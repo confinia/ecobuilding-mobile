@@ -613,6 +613,26 @@ private struct NeighbourhoodSection: View {
         return t("tax_headline", t("tax_level_" + level), Int(rank))
     }
 
+    /// Moyenne par avis dans la commune, en euros (confinia/ecobuilding#456) :
+    /// c'est ce qu'un lecteur comprend, là où un taux voté ne dit rien. Jamais
+    /// la cotisation de CE logement, qui dépend de sa valeur locative.
+    static func taxMean(_ taxes: JSONValue?, _ key: String) -> String? {
+        guard let eur = taxes?[key]?.doubleValue else { return nil }
+        return t("tax_mean", fmtEuros(eur))
+    }
+
+    /// La réserve qui accompagne ces moyennes, et le rang de la commune —
+    /// celui du MONTANT, car celui du taux trompait (Gruissan : 99e centile
+    /// en taux, 61e en euros).
+    static func taxNote(_ taxes: JSONValue?) -> String? {
+        guard let year = taxes?["rei_year"]?.intValue else { return nil }
+        var note = t("tax_mean_note", String(year))
+        if let rank = taxes?["property_tax_mean_rank_pct"]?.doubleValue {
+            note += " " + t("tax_mean_rank", Int(rank))
+        }
+        return note
+    }
+
     var body: some View {
         let medians = prices?["commune_eur_m2"]?.objectValue ?? [:]
         // Les trois dernières VENTES du bâtiment (DVF), comme sur le web : la
@@ -621,7 +641,8 @@ private struct NeighbourhoodSection: View {
         let ventes = Array((prices?["sales"]?.arrayValue ?? []).prefix(3))
         let nbSchools = schools?.arrayValue?.count ?? 0
         let tax = taxes?["property_tax_built_pct"]?.doubleValue
-        if !medians.isEmpty || nbSchools > 0 || tax != nil || !ventes.isEmpty {
+        let taxMean = taxes?["property_tax_mean_eur"]?.doubleValue
+        if !medians.isEmpty || nbSchools > 0 || tax != nil || taxMean != nil || !ventes.isEmpty {
             SectionBox(title: t("section_area")) {
                 ForEach(Array(ventes.enumerated()), id: \.offset) { _, v in
                     if let prix = v["valeur_fonciere"]?.doubleValue {
@@ -636,15 +657,25 @@ private struct NeighbourhoodSection: View {
                     Row(label: t("median_price", Self.typeLocal(k).lowercased()),
                         value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
                 }
-                // Le taux voté seul ne parle à personne (#439) : d'abord la
-                // position parmi les communes de France, le taux en dessous.
-                Row(label: t("property_tax"),
-                    value: Self.taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
-                Row(label: t("waste_tax"),
-                    value: Self.taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
-                Row(label: t("property_tax_rate"), value: tax.map { String(format: "%.2f %%", $0) })
-                Row(label: t("waste_tax_rate"),
-                    value: taxes?["waste_tax_pct"]?.doubleValue.map { String(format: "%.2f %%", $0) })
+                // Un taux voté ne parle à personne (confinia/ecobuilding#456) :
+                // il s'applique à la moitié d'une valeur locative cadastrale
+                // que nul ne connaît. La moyenne par avis dans la commune, si.
+                if taxMean != nil {
+                    Row(label: t("property_tax"),
+                        value: Self.taxMean(taxes, "property_tax_mean_eur"))
+                    Row(label: t("waste_tax"),
+                        value: Self.taxMean(taxes, "waste_tax_mean_eur"))
+                } else {
+                    // Commune absente du REI (données occultées) : le rang du
+                    // taux, faute de montant.
+                    Row(label: t("property_tax"),
+                        value: Self.taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
+                    Row(label: t("waste_tax"),
+                        value: Self.taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
+                }
+                if let note = Self.taxNote(taxes) {
+                    Text(note).font(.caption2).foregroundStyle(.secondary)
+                }
                 Row(label: t("schools"), value: nbSchools > 0 ? "\(nbSchools)" : nil)
             }
         }

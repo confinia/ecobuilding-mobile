@@ -641,7 +641,8 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
     val ventes = (prices.obj("sales") as? JsonArray)?.take(3) ?: emptyList()
     val nbSchools = (schools as? JsonArray)?.size ?: 0
     val tax = taxes.num("property_tax_built_pct")
-    if (medians.isEmpty() && nbSchools == 0 && tax == null && ventes.isEmpty()) return
+    val taxMean = taxes.num("property_tax_mean_eur")
+    if (medians.isEmpty() && nbSchools == 0 && tax == null && taxMean == null && ventes.isEmpty()) return
     Section(stringResource(R.string.section_area)) {
         ventes.forEach { v ->
             val prix = v.num("valeur_fonciere") ?: return@forEach
@@ -655,12 +656,19 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
             Row(stringResource(R.string.median_price, typeLocal(k).lowercase()),
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
         }
-        // Le taux voté seul ne parle à personne (#439) : d'abord la position
-        // parmi les communes de France, le taux en dessous.
-        Row(stringResource(R.string.property_tax), taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
-        Row(stringResource(R.string.waste_tax), taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
-        Row(stringResource(R.string.property_tax_rate), tax?.let { fmt("%.2f %%", it) })
-        Row(stringResource(R.string.waste_tax_rate), taxes.num("waste_tax_pct")?.let { fmt("%.2f %%", it) })
+        // Un taux voté ne parle à personne (confinia/ecobuilding#456) : il
+        // s'applique à la moitié d'une valeur locative cadastrale que nul ne
+        // connaît. La moyenne par avis dans la commune, si.
+        if (taxMean != null) {
+            Row(stringResource(R.string.property_tax), taxMeanEur(taxes, "property_tax_mean_eur"))
+            Row(stringResource(R.string.waste_tax), taxMeanEur(taxes, "waste_tax_mean_eur"))
+        } else {
+            // Commune absente du REI (données occultées) : le rang du taux,
+            // faute de montant.
+            Row(stringResource(R.string.property_tax), taxHeadline(taxes, "property_tax_level", "property_tax_rank_pct"))
+            Row(stringResource(R.string.waste_tax), taxHeadline(taxes, "waste_tax_level", "waste_tax_rank_pct"))
+        }
+        taxNote(taxes)?.let { Text(it, fontSize = 11.sp, color = Color.Gray) }
         Row(stringResource(R.string.schools), if (nbSchools > 0) "$nbSchools" else null)
     }
 }
@@ -722,6 +730,35 @@ private fun taxHeadline(taxes: JsonElement?, levelKey: String, rankKey: String):
         else -> R.string.tax_level_average
     }
     return stringResource(R.string.tax_headline, stringResource(word), rank.toInt())
+}
+
+/**
+ * Moyenne par avis dans la commune, en euros (confinia/ecobuilding#456) :
+ * c'est ce qu'un lecteur comprend, là où un taux voté ne dit rien. Jamais la
+ * cotisation de CE logement, qui dépend de sa valeur locative.
+ */
+@Composable
+private fun taxMeanEur(taxes: JsonElement?, key: String): String? {
+    val eur = taxes.num(key) ?: return null
+    return stringResource(R.string.tax_mean,
+        java.text.NumberFormat.getIntegerInstance().format(eur.toLong()))
+}
+
+/**
+ * La réserve qui accompagne ces moyennes, et le rang de la commune — celui du
+ * MONTANT, car celui du taux trompait (Gruissan : 99e centile en taux, 61e en
+ * euros).
+ */
+@Composable
+private fun taxNote(taxes: JsonElement?): String? {
+    val year = taxes.num("rei_year")?.toInt() ?: return null
+    var note = stringResource(R.string.tax_mean_note, year.toString())
+    // La phrase se recolle ICI : une ressource Android perd l'espace de tête
+    // que le fichier .strings d'iOS, lui, garde.
+    taxes.num("property_tax_mean_rank_pct")?.let {
+        note += " " + stringResource(R.string.tax_mean_rank, it.toInt())
+    }
+    return note
 }
 
 private fun fmt(pattern: String, value: Double): String =

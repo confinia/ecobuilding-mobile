@@ -93,8 +93,9 @@
     <string name="median_price">Median price (%1$s)</string>
     <string name="property_tax">Property tax (taxe foncière)</string>
     <string name="waste_tax">Household waste tax</string>
-    <string name="property_tax_rate">Property tax (built land), voted rate</string>
-    <string name="waste_tax_rate">TEOM, voted rate</string>
+    <string name="tax_mean">about €%1$s/yr</string>
+    <string name="tax_mean_note">Averages per property-tax bill in the municipality (DGFiP, REI %1$s): an order of magnitude, not the amount due for this dwelling, which depends on its cadastral rental value.</string>
+    <string name="tax_mean_rank">Property tax higher than in %1$d %% of French municipalities.</string>
     <string name="tax_level_low">Moderate</string>
     <string name="tax_level_average">Average</string>
     <string name="tax_level_high">High</string>

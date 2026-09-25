@@ -100,10 +100,11 @@
     <string name="local_house">Maison</string>
     <string name="commune_until">%1$s, jusqu\'au %2$s</string>
     <string name="median_price">Prix médian (%1$s)</string>
-    <string name="property_tax">Taxe foncière (bâti)</string>
+    <string name="property_tax">Taxe foncière</string>
     <string name="waste_tax">Ordures ménagères</string>
-    <string name="property_tax_rate">Taxe foncière (bâti), taux voté</string>
-    <string name="waste_tax_rate">TEOM, taux voté</string>
+    <string name="tax_mean">environ %1$s €/an</string>
+    <string name="tax_mean_note">Moyennes par avis de taxe foncière dans la commune (DGFiP, REI %1$s) : un ordre de grandeur, pas le montant dû pour ce logement, qui dépend de sa valeur locative cadastrale.</string>
+    <string name="tax_mean_rank">Taxe foncière plus élevée que dans %1$d %% des communes.</string>
     <string name="tax_level_low">Modérée</string>
     <string name="tax_level_average">Dans la moyenne</string>
     <string name="tax_level_high">Élevée</string>

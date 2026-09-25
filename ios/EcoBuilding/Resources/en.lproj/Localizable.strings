@@ -156,8 +156,9 @@
 "unit_solar" = "%lld kWh/yr per kWp";
 "walls" = "Walls";
 "waste_tax" = "Household waste tax";
-"property_tax_rate" = "Property tax (built land), voted rate";
-"waste_tax_rate" = "TEOM, voted rate";
+"tax_mean" = "about €%1$@/yr";
+"tax_mean_note" = "Averages per property-tax bill in the municipality (DGFiP, REI %1$@): an order of magnitude, not the amount due for this dwelling, which depends on its cadastral rental value.";
+"tax_mean_rank" = "Property tax higher than in %1$d %% of French municipalities.";
 "tax_level_low" = "Moderate";
 "tax_level_average" = "Average";
 "tax_level_high" = "High";
