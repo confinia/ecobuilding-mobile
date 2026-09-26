@@ -193,5 +193,6 @@
     <string name="unit_dwellings">%1$d dwellings</string>
     <string name="dpe_short">EPC %1$s</string>
     <string name="no_characteristics">no published characteristics</string>
-    <string name="annexe_probable">— probably an outbuilding</string>
+    <string name="building_n">Building %1$d</string>
+    <string name="annexe_probable">Probably an outbuilding</string>
 </resources>

@@ -174,4 +174,5 @@
 "unit_dwellings" = "%1$d dwellings";
 "dpe_short" = "EPC %1$@";
 "no_characteristics" = "no published characteristics";
-"annexe_probable" = "— probably an outbuilding";
+"annexe_probable" = "Probably an outbuilding";
+"building_n" = "Building %1$d";

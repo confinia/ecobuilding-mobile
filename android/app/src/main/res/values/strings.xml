@@ -205,5 +205,6 @@
     <string name="unit_dwellings">%1$d logements</string>
     <string name="dpe_short">DPE %1$s</string>
     <string name="no_characteristics">aucune caractéristique publiée</string>
-    <string name="annexe_probable">— annexe probable</string>
+    <string name="building_n">Bâtiment %1$d</string>
+    <string name="annexe_probable">Annexe probable</string>
 </resources>

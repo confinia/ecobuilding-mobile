@@ -701,21 +701,21 @@ private struct NeighbourhoodSection: View {
 private struct AddressBuildingsSection: View {
     let a: JSONValue?
 
-    /// « 2019 · 0 logement · 6 m — annexe probable » : ce qui distingue un
-    /// bâtiment de son voisin, avec ce que la BDNB en dit vraiment.
+    /// « Annexe probable · 2019 · 6 m » (confinia/ecobuilding#462) : la NATURE
+    /// d'abord, les chiffres ensuite. L'ordre inverse faisait lire une année
+    /// et « 0 logements » avant d'apprendre qu'il s'agit d'un garage — et ce
+    /// zéro, le mot le dit déjà.
     static func label(_ o: JSONValue) -> String {
+        let annexe = o["annexe"]?.boolValue == true
         var bouts: [String] = []
-        if let an = o["construction_year"]?.intValue { bouts.append(String(an)) }
-        if let n = o["dwellings"]?.intValue {
+        if annexe { bouts.append(t("annexe_probable")) }
+        if let n = o["dwellings"]?.intValue, !(annexe && n == 0) {
             bouts.append(n == 1 ? t("unit_dwelling", n) : t("unit_dwellings", n))
         }
+        if let an = o["construction_year"]?.intValue { bouts.append(String(an)) }
         if let h = o["height_m"]?.doubleValue { bouts.append(t("unit_metres", Int(h))) }
         if let cls = o["energy"]?["dpe_class"]?.stringValue { bouts.append(t("dpe_short", cls)) }
-        var label = bouts.isEmpty ? t("no_characteristics") : bouts.joined(separator: " · ")
-        // L'espace se recolle ICI : une ressource Android perd celui de tête,
-        // et les deux apps doivent lire pareil.
-        if o["annexe"]?.boolValue == true { label += " " + t("annexe_probable") }
-        return label
+        return bouts.isEmpty ? t("no_characteristics") : bouts.joined(separator: " · ")
     }
 
     var body: some View {
@@ -726,8 +726,11 @@ private struct AddressBuildingsSection: View {
                      ? t("address_buildings_main", a?["count"]?.intValue ?? others.count + 1)
                      : t("address_buildings_chosen", a?["count"]?.intValue ?? others.count + 1))
                     .font(.caption2).foregroundStyle(.secondary)
-                ForEach(Array(others.enumerated()), id: \.offset) { _, o in
-                    Row(label: Self.label(o), value: o["bdnb_id"]?.stringValue)
+                // Numérotés pour pouvoir être NOMMÉS, et SANS identifiant BDNB :
+                // dans une app on ne peut pas le suivre, il n'apprend rien à
+                // personne et il écrasait la seule ligne qui informe (#462).
+                ForEach(Array(others.enumerated()), id: \.offset) { i, o in
+                    Row(label: t("building_n", i + 2), value: Self.label(o))
                 }
             }
         }

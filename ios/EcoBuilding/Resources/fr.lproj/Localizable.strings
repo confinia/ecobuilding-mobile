@@ -174,4 +174,5 @@
 "unit_dwellings" = "%1$d logements";
 "dpe_short" = "DPE %1$@";
 "no_characteristics" = "aucune caractéristique publiée";
-"annexe_probable" = "— annexe probable";
+"annexe_probable" = "Annexe probable";
+"building_n" = "Bâtiment %1$d";
