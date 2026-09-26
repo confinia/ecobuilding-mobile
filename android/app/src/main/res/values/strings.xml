@@ -196,4 +196,14 @@
     <string name="dpe_spread_same">%1$d diagnostics à cette adresse, tous en %2$s.</string>
     <string name="unit_m2_txt">%1$s m²</string>
     <string name="report_this_dwelling">Fiche de ce logement</string>
+
+    <!-- Autres bâtiments à cette adresse (confinia/ecobuilding#458) -->
+    <string name="block_address_buildings">Autres bâtiments à cette adresse</string>
+    <string name="address_buildings_main">%1$d bâtiments à cette adresse, le principal est décrit ici.</string>
+    <string name="address_buildings_chosen">%1$d bâtiments à cette adresse, celui décrit ici a été choisi.</string>
+    <string name="unit_dwelling">%1$d logement</string>
+    <string name="unit_dwellings">%1$d logements</string>
+    <string name="dpe_short">DPE %1$s</string>
+    <string name="no_characteristics">aucune caractéristique publiée</string>
+    <string name="annexe_probable">— annexe probable</string>
 </resources>

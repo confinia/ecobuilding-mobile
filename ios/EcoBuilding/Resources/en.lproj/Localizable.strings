@@ -165,3 +165,13 @@
 "tax_headline" = "%1$@ — higher than in %2$d %% of French municipalities";
 "water_efficiency" = "Water network efficiency";
 "water_price" = "Water price";
+
+/* Other buildings at this address (confinia/ecobuilding#458) */
+"block_address_buildings" = "Other buildings at this address";
+"address_buildings_main" = "%1$d buildings at this address; the main one is described here.";
+"address_buildings_chosen" = "%1$d buildings at this address; the one described here was the one selected.";
+"unit_dwelling" = "%1$d dwelling";
+"unit_dwellings" = "%1$d dwellings";
+"dpe_short" = "EPC %1$@";
+"no_characteristics" = "no published characteristics";
+"annexe_probable" = "— probably an outbuilding";

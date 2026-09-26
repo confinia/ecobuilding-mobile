@@ -65,7 +65,7 @@ class BuildingModel {
         // moins que le web pour la même adresse.
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
             "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune",
-            "dpe_spread", "urbanisme", "ppri", "construction")
+            "dpe_spread", "urbanisme", "ppri", "construction", "address_buildings")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
         val LABELS = mapOf(
@@ -82,7 +82,8 @@ class BuildingModel {
             "dpe_spread" to R.string.block_dpe_spread,
             "urbanisme" to R.string.block_urbanisme,
             "ppri" to R.string.block_ppri,
-            "construction" to R.string.block_construction)
+            "construction" to R.string.block_construction,
+            "address_buildings" to R.string.block_address_buildings)
     }
 
     suspend fun load(context: Context, target: Target, onResolved: (String) -> Unit) {
@@ -221,7 +222,8 @@ fun BuildingSheet(model: BuildingModel, quota: Quota?, onClose: () -> Unit,
                         Row(stringResource(R.string.walls), b.str("wall_material")?.capitalize())
                         Row(stringResource(R.string.roof), b.str("roof_material")?.capitalize())
                     }
-                    RisksSection(model.blocks["area_risks"], model.blocks["ppri"])
+AddressBuildingsSection(model.blocks["address_buildings"])
+                                        RisksSection(model.blocks["area_risks"], model.blocks["ppri"])
                     UrbanismeSection(model.blocks["urbanisme"], model.lon, model.lat)
                     EnvironmentSection(model.blocks["groundwater"], model.blocks["solar_pv"],
                         model.blocks["water_network"])
@@ -737,6 +739,48 @@ private fun taxHeadline(taxes: JsonElement?, levelKey: String, rankKey: String):
  * c'est ce qu'un lecteur comprend, là où un taux voté ne dit rien. Jamais la
  * cotisation de CE logement, qui dépend de sa valeur locative.
  */
+/**
+ * Plusieurs « bâtiments groupe » BDNB à la même adresse
+ * (confinia/ecobuilding#458) : la fiche en décrit un — le principal depuis
+ * #454 — et se taisait sur les autres. Une annexe probable (ni logement ni
+ * DPE) est DITE telle, jamais masquée : c'est l'omission qui avait fait
+ * croire à une erreur de données.
+ */
+@Composable
+private fun AddressBuildingsSection(a: JsonElement?) {
+    val others = (a.obj("others") as? JsonArray).orEmpty()
+    if (others.isEmpty()) return
+    val count = a.num("count")?.toInt() ?: (others.size + 1)
+    val main = (a.obj("described_is_main") as? JsonPrimitive)?.booleanOrNull == true
+    Section(stringResource(R.string.block_address_buildings)) {
+        Text(stringResource(
+            if (main) R.string.address_buildings_main else R.string.address_buildings_chosen,
+            count), fontSize = 11.sp, color = Color.Gray)
+        others.forEach { o -> Row(buildingLabel(o), o.str("bdnb_id")) }
+    }
+}
+
+/** « 2019 · 0 logement · 6 m — annexe probable » : ce qui distingue un
+ *  bâtiment de son voisin, avec ce que la BDNB en dit vraiment. */
+@Composable
+private fun buildingLabel(o: JsonElement?): String {
+    val bouts = mutableListOf<String>()
+    o.num("construction_year")?.toInt()?.let { bouts += it.toString() }
+    o.num("dwellings")?.toInt()?.let {
+        bouts += stringResource(if (it == 1) R.string.unit_dwelling else R.string.unit_dwellings, it)
+    }
+    o.num("height_m")?.let { bouts += stringResource(R.string.unit_metres, it.toInt()) }
+    (o.obj("energy") as? JsonElement).str("dpe_class")?.let {
+        bouts += stringResource(R.string.dpe_short, it)
+    }
+    var label = if (bouts.isEmpty()) stringResource(R.string.no_characteristics)
+                else bouts.joinToString(" · ")
+    if ((o.obj("annexe") as? JsonPrimitive)?.booleanOrNull == true) {
+        label += " " + stringResource(R.string.annexe_probable)
+    }
+    return label
+}
+
 @Composable
 private fun taxMeanEur(taxes: JsonElement?, key: String): String? {
     val eur = taxes.num(key) ?: return null

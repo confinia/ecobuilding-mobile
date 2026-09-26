@@ -34,7 +34,8 @@ final class BuildingModel: ObservableObject {
     // ignorés : l'app affichait moins que le web pour la même adresse.
     static let expected = ["area_risks", "groundwater", "solar_pv", "water_network",
                            "official_dpe", "local_taxes", "schools", "prices", "rnb",
-                           "commune", "dpe_spread", "urbanisme", "ppri", "construction"]
+                           "commune", "dpe_spread", "urbanisme", "ppri", "construction",
+                           "address_buildings"]
     static let labels = [
         "area_risks": "Risques", "groundwater": "Nappe phréatique",
         "solar_pv": "Solaire", "water_network": "Eau potable",
@@ -43,6 +44,7 @@ final class BuildingModel: ObservableObject {
         "commune": t("block_commune"), "dpe_spread": t("block_dpe_spread"),
         "urbanisme": t("block_urbanisme"), "ppri": t("block_ppri"),
         "construction": t("block_construction"),
+        "address_buildings": t("block_address_buildings"),
     ]
 
     var buildingID: String? { building?["bdnb_id"]?.stringValue }
@@ -131,6 +133,7 @@ struct BuildingSheet: View {
                     EnergySection(building: b, officialDPE: model.blocks["official_dpe"],
                                   spread: model.blocks["dpe_spread"], model: model)
                     BuildingSection(building: b, construction: model.blocks["construction"])
+                    AddressBuildingsSection(a: model.blocks["address_buildings"])
                     RisksSection(risks: model.blocks["area_risks"], ppri: model.blocks["ppri"])
                     UrbanismeSection(plu: model.blocks["urbanisme"], lon: model.lon, lat: model.lat)
                     EnvironmentSection(groundwater: model.blocks["groundwater"],
@@ -687,6 +690,47 @@ private struct NeighbourhoodSection: View {
         f.numberStyle = .decimal
         f.maximumFractionDigits = 0
         return f.string(from: NSNumber(value: v)) ?? String(Int(v))
+    }
+}
+
+/// Plusieurs « bâtiments groupe » BDNB à la même adresse
+/// (confinia/ecobuilding#458) : la fiche en décrit un — le principal depuis
+/// #454 — et se taisait sur les autres. Une annexe probable (ni logement ni
+/// DPE) est DITE telle, jamais masquée : c'est l'omission qui avait fait
+/// croire à une erreur de données.
+private struct AddressBuildingsSection: View {
+    let a: JSONValue?
+
+    /// « 2019 · 0 logement · 6 m — annexe probable » : ce qui distingue un
+    /// bâtiment de son voisin, avec ce que la BDNB en dit vraiment.
+    static func label(_ o: JSONValue) -> String {
+        var bouts: [String] = []
+        if let an = o["construction_year"]?.intValue { bouts.append(String(an)) }
+        if let n = o["dwellings"]?.intValue {
+            bouts.append(n == 1 ? t("unit_dwelling", n) : t("unit_dwellings", n))
+        }
+        if let h = o["height_m"]?.doubleValue { bouts.append(t("unit_metres", Int(h))) }
+        if let cls = o["energy"]?["dpe_class"]?.stringValue { bouts.append(t("dpe_short", cls)) }
+        var label = bouts.isEmpty ? t("no_characteristics") : bouts.joined(separator: " · ")
+        // L'espace se recolle ICI : une ressource Android perd celui de tête,
+        // et les deux apps doivent lire pareil.
+        if o["annexe"]?.boolValue == true { label += " " + t("annexe_probable") }
+        return label
+    }
+
+    var body: some View {
+        let others = a?["others"]?.arrayValue ?? []
+        if !others.isEmpty {
+            SectionBox(title: t("block_address_buildings")) {
+                Text(a?["described_is_main"]?.boolValue == true
+                     ? t("address_buildings_main", a?["count"]?.intValue ?? others.count + 1)
+                     : t("address_buildings_chosen", a?["count"]?.intValue ?? others.count + 1))
+                    .font(.caption2).foregroundStyle(.secondary)
+                ForEach(Array(others.enumerated()), id: \.offset) { _, o in
+                    Row(label: Self.label(o), value: o["bdnb_id"]?.stringValue)
+                }
+            }
+        }
     }
 }
 

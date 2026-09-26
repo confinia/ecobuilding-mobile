@@ -165,3 +165,13 @@
 "tax_headline" = "%1$@ — plus haute que dans %2$d %% des communes";
 "water_efficiency" = "Rendement du réseau d'eau";
 "water_price" = "Prix de l'eau";
+
+/* Autres bâtiments à cette adresse (confinia/ecobuilding#458) */
+"block_address_buildings" = "Autres bâtiments à cette adresse";
+"address_buildings_main" = "%1$d bâtiments à cette adresse, le principal est décrit ici.";
+"address_buildings_chosen" = "%1$d bâtiments à cette adresse, celui décrit ici a été choisi.";
+"unit_dwelling" = "%1$d logement";
+"unit_dwellings" = "%1$d logements";
+"dpe_short" = "DPE %1$@";
+"no_characteristics" = "aucune caractéristique publiée";
+"annexe_probable" = "— annexe probable";
