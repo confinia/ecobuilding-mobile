@@ -1,6 +1,3 @@
-• DPE validity: expiry date, lapsed surveys flagged and greyed out, letting ban in the past tense once it applies, and "no ban planned" for classes A to E.
-• Direct link to the official DPE on the ADEME observatory.
-• Planning: the parcel's PLU zone (Géoportail de l'urbanisme).
-• Hazards: PPRI flood zoning, blue or red, with its regulation.
-• Neighbourhood: the building's last three sales (DVF), with price, type and floor area.
-• The server's message is shown when the report limit is reached.
+• Property tax and household waste in euros: the average per tax bill in the municipality (DGFiP, REI 2025), instead of a voted rate that meant nothing on its own.
+• Several buildings at one address: the fiche describes the main one and says what the others are, outbuildings included.
+• An address shared by a house and its extension: the house is described, no longer whichever record came first.

@@ -1,3 +1,3 @@
-• Année de construction avec sa source : Fichiers fonciers, période déclarée aux DPE, ou permis de construire (Sitadel).
-• Fiscalité locale : la taxe foncière de la commune située par rapport à toutes les communes de France.
-• Interface entièrement en anglais quand l'appareil est en anglais.
+• Taxe foncière et ordures ménagères en euros : la moyenne par avis dans la commune (DGFiP, REI 2025), au lieu d'un taux voté.
+• Plusieurs bâtiments à une même adresse : la fiche décrit le principal et dit ce que sont les autres, annexes comprises.
+• Adresse partagée entre une maison et son extension : c'est la maison qui est décrite.
