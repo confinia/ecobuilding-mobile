@@ -2,7 +2,6 @@
    côté Android : une seule décision de vocabulaire pour les deux apps.
    ENGENDRÉ par ios/strings-from-android.py : ne pas éditer à la main. */
 "annual_cost" = "Coût annuel d'énergie";
-"block_commune" = "Commune (Confinia)";
 "block_dpe" = "DPE officiel";
 "block_dpe_spread" = "DPE des logements (ADEME)";
 "block_groundwater" = "Nappe phréatique";
@@ -29,11 +28,6 @@
 "build_works_since" = "Travaux déclarés en %@";
 "build_year" = "Année de construction";
 "clay_hazard" = "Aléa retrait-gonflement";
-"commune_asof" = "Données arrêtées au";
-"commune_before" = "Auparavant";
-"commune_ended" = "A cessé d'exister le";
-"commune_name" = "Commune";
-"commune_since" = "Nom et limites inchangés depuis";
 "data_unavailable" = "Données momentanément indisponibles.";
 "dpe_class" = "Classe DPE %@";
 "dpe_date" = "Date du DPE";
@@ -66,7 +60,6 @@
 "main_address" = "Adresse principale du bâtiment : %@";
 "local_apartment" = "Appartement";
 "local_house" = "Maison";
-"commune_until" = "%1$@, jusqu'au %2$@";
 "median_price" = "Prix médian (%@)";
 "no_building_here" = "Aucun bâtiment n'est décrit à cette adresse dans la base nationale (BDNB).";
 "no_rental_ban" = "✓ Aucune interdiction de location prévue pour la classe %@";
@@ -129,7 +122,6 @@
 "search_hint" = "Adresse en France…";
 "section_area" = "Quartier";
 "section_building" = "Bâtiment";
-"section_commune" = "COMMUNE";
 "section_energy" = "Énergie";
 "section_environment" = "Environnement";
 "section_ids" = "Identifiants";

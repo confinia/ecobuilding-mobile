@@ -64,7 +64,7 @@ class BuildingModel {
         // (#377) arrivaient déjà en 1.0 et étaient ignorés : l'app affichait
         // moins que le web pour la même adresse.
         val EXPECTED = listOf("area_risks", "groundwater", "solar_pv", "water_network",
-            "official_dpe", "local_taxes", "schools", "prices", "rnb", "commune",
+            "official_dpe", "local_taxes", "schools", "prices", "rnb",
             "dpe_spread", "urbanisme", "ppri", "construction", "address_buildings")
         /** Libellés des sources encore attendues, par identifiant de ressource
          *  et non en dur : ils s'affichent dans la langue du téléphone. */
@@ -78,7 +78,6 @@ class BuildingModel {
             "schools" to R.string.block_schools,
             "prices" to R.string.block_prices,
             "rnb" to R.string.block_rnb,
-            "commune" to R.string.block_commune,
             "dpe_spread" to R.string.block_dpe_spread,
             "urbanisme" to R.string.block_urbanisme,
             "ppri" to R.string.block_ppri,
@@ -229,7 +228,6 @@ AddressBuildingsSection(model.blocks["address_buildings"])
                         model.blocks["water_network"])
                     NeighbourhoodSection(model.blocks["local_taxes"], model.blocks["schools"],
                         model.blocks["prices"])
-                    CommuneSection(model.blocks["commune"])
                     Section(stringResource(R.string.section_ids)) {
                         Row(stringResource(R.string.id_rnb), model.blocks["rnb"].str("rnb_id"))
                         Row(stringResource(R.string.id_bdnb), b.str("bdnb_id"))
@@ -465,42 +463,6 @@ private fun Row(label: String, value: String?) {
         Text(label, color = Color.Gray, fontSize = 14.sp)
         Text(value, fontSize = 14.sp, modifier = Modifier.weight(1f),
             textAlign = androidx.compose.ui.text.style.TextAlign.End)
-    }
-}
-
-/**
- * La commune au sens CIVIL, et le nom qu'elle portait avant (#275).
- *
- * Un acte ancien nomme parfois une commune qui n'existe plus. Et quand rien
- * n'a bougé, le dire — daté et sourcé — vaut aussi la peine.
- *
- * Les réserves de la source sont reprises, jamais résumées : répéter ses
- * chiffres sans ses réserves affirmerait plus qu'elle.
- */
-@Composable
-private fun CommuneSection(commune: JsonElement?) {
-    val nom = commune.str("nom") ?: return
-    Section(stringResource(R.string.section_commune)) {
-        Row(stringResource(R.string.commune_name),
-            commune.str("code")?.let { "$nom ($it)" } ?: nom)
-        val encore = (commune.obj("existe_encore") as? JsonPrimitive)?.booleanOrNull ?: true
-        // La date de FIN quand la commune a cessé d'exister, et non celle de
-        // début : la fiche annonçait « a cessé d'exister le 1ᵉʳ janvier 1870 »
-        // en affichant le commencement de la version.
-        Row(stringResource(if (encore) R.string.commune_since else R.string.commune_ended),
-            commune.str(if (encore) "depuis_fr" else "jusqu_au_fr"))
-        val avant = commune.obj("precedent")
-        avant.str("nom")?.let { n ->
-            Row(stringResource(R.string.commune_before),
-                avant.str("jusqu_au_fr")?.let { stringResource(R.string.commune_until, n, it) } ?: n)
-        }
-        Row(stringResource(R.string.commune_asof), commune.str("arret_des_donnees_fr"))
-        val reserves = commune.strings("limites") +
-            ((commune.obj("non_etablis") as? JsonArray)?.mapNotNull { it.str("texte") }
-                ?: emptyList())
-        if (reserves.isNotEmpty()) {
-            Text(reserves.joinToString(" "), fontSize = 11.sp, color = Color.Gray)
-        }
     }
 }
 

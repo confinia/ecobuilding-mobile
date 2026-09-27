@@ -98,7 +98,6 @@
     <string name="section_area">Quartier</string>
     <string name="local_apartment">Appartement</string>
     <string name="local_house">Maison</string>
-    <string name="commune_until">%1$s, jusqu\'au %2$s</string>
     <string name="median_price">Prix médian (%1$s)</string>
     <string name="property_tax">Taxe foncière</string>
     <string name="waste_tax">Ordures ménagères</string>
@@ -184,13 +183,6 @@
     <string name="unit_m2">%1$d m²</string>
     <string name="unit_eur_m2">%1$d €/m²</string>
     <string name="no_building_here">Aucun bâtiment n\'est décrit à cette adresse dans la base nationale (BDNB).</string>
-    <string name="block_commune">Commune (Confinia)</string>
-    <string name="section_commune">COMMUNE</string>
-    <string name="commune_name">Commune</string>
-    <string name="commune_since">Nom et limites inchangés depuis</string>
-    <string name="commune_ended">A cessé d\'exister le</string>
-    <string name="commune_before">Auparavant</string>
-    <string name="commune_asof">Données arrêtées au</string>
     <string name="block_dpe_spread">DPE des logements (ADEME)</string>
     <string name="dpe_spread_range">%1$d diagnostics à cette adresse : de %2$s à %3$s. La classe ci-dessus est celle du logement représentatif, pas celle de tous.</string>
     <string name="dpe_spread_same">%1$d diagnostics à cette adresse, tous en %2$s.</string>
