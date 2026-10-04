@@ -620,6 +620,31 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
             Row(stringResource(R.string.median_price, typeLocal(k).lowercase()),
                 (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
         }
+        // Le QUARTIER et la tendance (confinia/ecobuilding#426) : « ma rue »
+        // et « dans quel sens ça bouge », à côté de la commune.
+        val autour = prices.obj("around")
+        val tendance = prices.obj("trend")
+        listOf("Maison", "Appartement").forEach { k ->
+            val q = autour.obj("area_eur_m2").obj(k)
+            q.num("median")?.toInt()?.let { med ->
+                Row(stringResource(R.string.median_area, typeLocal(k).lowercase()),
+                    stringResource(R.string.median_value_n, med, q.num("n")?.toInt() ?: 0))
+            }
+            trendText(tendance.obj("area").obj(k))?.let {
+                Row(stringResource(R.string.trend_area, typeLocal(k).lowercase()), it)
+            }
+            trendText(tendance.obj("commune").obj(k))?.let {
+                Row(stringResource(R.string.trend_commune, typeLocal(k).lowercase()), it)
+            }
+        }
+        ((autour.obj("sales") as? JsonArray)?.take(3) ?: emptyList()).forEach { v ->
+            val prix = v.num("valeur_fonciere") ?: return@forEach
+            val quand = v.str("date")?.let { fmtDate(it) } ?: "?"
+            val type = typeLocal(v.str("type_local"))
+            val surface = v.num("surface_m2")?.let { stringResource(R.string.unit_m2, it.toInt()) } ?: "—"
+            Row(stringResource(R.string.sale_near_line, quand, type, surface, v.num("distance_m")?.toInt() ?: 0),
+                stringResource(R.string.unit_eur, java.text.NumberFormat.getIntegerInstance().format(prix.toLong())))
+        }
         // Un taux voté ne parle à personne (confinia/ecobuilding#456) : il
         // s'applique à la moitié d'une valeur locative cadastrale que nul ne
         // connaît. La moyenne par avis dans la commune, si.
@@ -682,6 +707,20 @@ private fun typeLocal(raw: String?): String = when (raw?.lowercase()) {
     "appartement" -> stringResource(R.string.local_apartment)
     "maison" -> stringResource(R.string.local_house)
     else -> raw ?: "?"
+}
+
+/** « +7 % depuis 2021 » : première et dernière médiane annuelle ; rien sous
+ *  deux années (confinia/ecobuilding#426). */
+@Composable
+private fun trendText(serie: JsonElement?): String? {
+    val a = serie as? JsonArray ?: return null
+    if (a.size < 2) return null
+    val f = a.first().num("median") ?: return null
+    val l = a.last().num("median") ?: return null
+    val y = a.first().num("year")?.toInt() ?: return null
+    if (f <= 0) return null
+    val pct = Math.round((l - f) * 100 / f).toInt()
+    return stringResource(R.string.trend_value, (if (pct > 0) "+" else "") + pct, y)
 }
 
 @Composable

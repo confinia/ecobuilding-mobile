@@ -61,6 +61,12 @@
 "local_apartment" = "Appartement";
 "local_house" = "Maison";
 "median_price" = "Prix médian (%@)";
+"median_area" = "Médiane du quartier (%@)";
+"median_value_n" = "%1$lld €/m² (%2$lld ventes)";
+"trend_commune" = "Tendance commune (%@)";
+"trend_area" = "Tendance quartier (%@)";
+"trend_value" = "%1$@ %% depuis %2$lld";
+"sale_near_line" = "%1$@ · %2$@ · %3$@ · à %4$lld m";
 "no_building_here" = "Aucun bâtiment n'est décrit à cette adresse dans la base nationale (BDNB).";
 "no_rental_ban" = "✓ Aucune interdiction de location prévue pour la classe %@";
 "no_rental_ban_expired" = "✓ Aucune interdiction de location prévue pour la classe %@, sous réserve du nouveau DPE";

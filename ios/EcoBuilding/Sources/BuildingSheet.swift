@@ -622,6 +622,29 @@ private struct NeighbourhoodSection: View {
                     Row(label: t("median_price", Self.typeLocal(k).lowercased()),
                         value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
                 }
+                // Le QUARTIER et la tendance (confinia/ecobuilding#426) : « ma
+                // rue » et « dans quel sens ça bouge », à côté de la commune.
+                ForEach(["Maison", "Appartement"], id: \.self) { k in
+                    if let q = prices?["around"]?["area_eur_m2"]?[k], let med = q["median"]?.intValue {
+                        Row(label: t("median_area", Self.typeLocal(k).lowercased()),
+                            value: t("median_value_n", med, q["n"]?.intValue ?? 0))
+                    }
+                    if let v = Self.trend(prices?["trend"]?["area"]?[k]) {
+                        Row(label: t("trend_area", Self.typeLocal(k).lowercased()), value: v)
+                    }
+                    if let v = Self.trend(prices?["trend"]?["commune"]?[k]) {
+                        Row(label: t("trend_commune", Self.typeLocal(k).lowercased()), value: v)
+                    }
+                }
+                ForEach(Array((prices?["around"]?["sales"]?.arrayValue ?? []).prefix(3).enumerated()), id: \.offset) { _, v in
+                    if let prix = v["valeur_fonciere"]?.doubleValue {
+                        let quand = v["date"]?.stringValue.map { EnergySection.fmtDate($0) } ?? "?"
+                        let type = Self.typeLocal(v["type_local"]?.stringValue)
+                        let surface = v["surface_m2"]?.doubleValue.map { t("unit_m2", Int($0)) } ?? "—"
+                        Row(label: t("sale_near_line", quand, type, surface, v["distance_m"]?.intValue ?? 0),
+                            value: t("unit_eur", Self.fmtEuros(prix)))
+                    }
+                }
                 // Un taux voté ne parle à personne (confinia/ecobuilding#456) :
                 // il s'applique à la moitié d'une valeur locative cadastrale
                 // que nul ne connaît. La moyenne par avis dans la commune, si.
@@ -647,6 +670,17 @@ private struct NeighbourhoodSection: View {
     }
 
     /// 345000 -> « 345 000 » (séparateur de la langue de l'écran).
+    /// « +7 % depuis 2021 » : première et dernière médiane annuelle ; rien
+    /// sous deux années (confinia/ecobuilding#426).
+    static func trend(_ serie: JSONValue?) -> String? {
+        guard let a = serie?.arrayValue, a.count >= 2,
+              let f = a.first?["median"]?.doubleValue, f > 0,
+              let l = a.last?["median"]?.doubleValue,
+              let y = a.first?["year"]?.intValue else { return nil }
+        let pct = Int(((l - f) * 100 / f).rounded())
+        return t("trend_value", (pct > 0 ? "+" : "") + String(pct), y)
+    }
+
     private static func fmtEuros(_ v: Double) -> String {
         let f = NumberFormatter()
         f.numberStyle = .decimal

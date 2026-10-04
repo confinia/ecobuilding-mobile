@@ -99,6 +99,12 @@
     <string name="local_apartment">Appartement</string>
     <string name="local_house">Maison</string>
     <string name="median_price">Prix médian (%1$s)</string>
+    <string name="median_area">Médiane du quartier (%1$s)</string>
+    <string name="median_value_n">%1$d €/m² (%2$d ventes)</string>
+    <string name="trend_commune">Tendance commune (%1$s)</string>
+    <string name="trend_area">Tendance quartier (%1$s)</string>
+    <string name="trend_value">%1$s %% depuis %2$d</string>
+    <string name="sale_near_line">%1$s · %2$s · %3$s · à %4$d m</string>
     <string name="property_tax">Taxe foncière</string>
     <string name="waste_tax">Ordures ménagères</string>
     <string name="tax_mean">environ %1$s €/an</string>

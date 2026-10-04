@@ -61,6 +61,12 @@
 "local_apartment" = "Apartment";
 "local_house" = "House";
 "median_price" = "Median price (%@)";
+"median_area" = "Neighbourhood median (%@)";
+"median_value_n" = "%1$lld €/m² (%2$lld sales)";
+"trend_commune" = "Trend, municipality (%@)";
+"trend_area" = "Trend, neighbourhood (%@)";
+"trend_value" = "%1$@ %% since %2$lld";
+"sale_near_line" = "%1$@ · %2$@ · %3$@ · %4$lld m away";
 "no_building_here" = "No building is described at this address in the national database (BDNB).";
 "no_rental_ban" = "✓ No letting ban planned for class %@";
 "no_rental_ban_expired" = "✓ No letting ban planned for class %@, pending a new DPE";
