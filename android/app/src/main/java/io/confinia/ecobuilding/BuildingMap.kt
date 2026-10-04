@@ -173,6 +173,12 @@ fun BuildingMap(
                     // MapLibre, hérité sans l'avoir choisi. À 30° et au niveau
                     // de travail, ce zoom était presque toujours subi.
                     map.uiSettings.isDoubleTapGesturesEnabled = false
+                    // Nord en haut, toujours (confinia/ecobuilding#505) : faire
+                    // tourner la carte perdait l'utilisateur, qui ne
+                    // reconnaissait plus sa rue. Inclinaison et zoom restent
+                    // libres ; la boussole n'a plus lieu d'être.
+                    map.uiSettings.isRotateGesturesEnabled = false
+                    map.uiSettings.isCompassEnabled = false
                     map.addOnMapClickListener { point ->
                         state.handleTap(map, point, onArmed, onSelect, onReportWanted)
                         true

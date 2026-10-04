@@ -87,6 +87,12 @@ struct BuildingMap: UIViewRepresentable {
         // oblige l'utilisateur à chercher avant de comprendre à quoi sert l'app.
         map.minimumZoomLevel = 5
         map.showsUserLocation = true
+        // Nord en haut, toujours (confinia/ecobuilding#505) : faire tourner
+        // la carte perdait l'utilisateur, qui ne reconnaissait plus sa rue.
+        // L'inclinaison et le zoom restent libres ; la boussole n'a plus lieu
+        // d'être.
+        map.allowsRotating = false
+        map.compassView.isHidden = true
 
         // Partir de la position de l'utilisateur, PAS d'une ville en dur.
         // Auparavant la carte s'ouvrait sur Montpellier puis traversait la
