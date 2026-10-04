@@ -100,6 +100,7 @@
     <string name="local_house">Maison</string>
     <string name="median_price">Prix médian (%1$s)</string>
     <string name="median_area">Médiane du quartier (%1$s)</string>
+    <string name="median_too_few">%1$d ventes seulement : pas de médiane représentative</string>
     <string name="median_value_n">%1$d €/m² (%2$d ventes)</string>
     <string name="trend_commune">Tendance commune (%1$s)</string>
     <string name="trend_area">Tendance quartier (%1$s)</string>

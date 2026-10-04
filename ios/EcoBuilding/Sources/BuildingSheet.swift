@@ -618,16 +618,17 @@ private struct NeighbourhoodSection: View {
                             value: t("unit_eur", Self.fmtEuros(prix)))
                     }
                 }
+                // Pas de médiane sous 10 ventes (confinia/ecobuilding#426).
                 ForEach(medians.keys.sorted(), id: \.self) { k in
                     Row(label: t("median_price", Self.typeLocal(k).lowercased()),
-                        value: medians[k]?["median"]?.intValue.map { t("unit_eur_m2", $0) })
+                        value: Self.median(medians[k]))
                 }
                 // Le QUARTIER et la tendance (confinia/ecobuilding#426) : « ma
                 // rue » et « dans quel sens ça bouge », à côté de la commune.
                 ForEach(["Maison", "Appartement"], id: \.self) { k in
-                    if let q = prices?["around"]?["area_eur_m2"]?[k], let med = q["median"]?.intValue {
+                    if let q = prices?["around"]?["area_eur_m2"]?[k], q["median"]?.intValue != nil {
                         Row(label: t("median_area", Self.typeLocal(k).lowercased()),
-                            value: t("median_value_n", med, q["n"]?.intValue ?? 0))
+                            value: Self.median(q))
                     }
                     if let v = Self.trend(prices?["trend"]?["area"]?[k]) {
                         Row(label: t("trend_area", Self.typeLocal(k).lowercased()), value: v)
@@ -670,6 +671,13 @@ private struct NeighbourhoodSection: View {
     }
 
     /// 345000 -> « 345 000 » (séparateur de la langue de l'écran).
+    /// Une médiane, ou le nombre de ventes quand il y en a moins de 10.
+    static func median(_ m: JSONValue?) -> String? {
+        guard let med = m?["median"]?.intValue else { return nil }
+        let n = m?["n"]?.intValue ?? 0
+        return n >= 10 ? t("median_value_n", med, n) : t("median_too_few", n)
+    }
+
     /// « +7 % depuis 2021 » : première et dernière médiane annuelle ; rien
     /// sous deux années (confinia/ecobuilding#426).
     static func trend(_ serie: JSONValue?) -> String? {

@@ -62,6 +62,7 @@
 "local_house" = "House";
 "median_price" = "Median price (%@)";
 "median_area" = "Neighbourhood median (%@)";
+"median_too_few" = "Only %lld sales: no representative median";
 "median_value_n" = "%1$lld €/m² (%2$lld sales)";
 "trend_commune" = "Trend, municipality (%@)";
 "trend_area" = "Trend, neighbourhood (%@)";

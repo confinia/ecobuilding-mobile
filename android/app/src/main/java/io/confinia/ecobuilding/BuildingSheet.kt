@@ -616,9 +616,9 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
             Row(stringResource(R.string.sale_line, quand, type, surface),
                 stringResource(R.string.unit_eur, java.text.NumberFormat.getIntegerInstance().format(prix.toLong())))
         }
+        // Pas de médiane sous 10 ventes (confinia/ecobuilding#426).
         medians.keys.sorted().forEach { k ->
-            Row(stringResource(R.string.median_price, typeLocal(k).lowercase()),
-                (medians[k] as JsonElement?).num("median")?.toInt()?.let { stringResource(R.string.unit_eur_m2, it) })
+            Row(stringResource(R.string.median_price, typeLocal(k).lowercase()), medianText(medians[k]))
         }
         // Le QUARTIER et la tendance (confinia/ecobuilding#426) : « ma rue »
         // et « dans quel sens ça bouge », à côté de la commune.
@@ -626,10 +626,7 @@ private fun NeighbourhoodSection(taxes: JsonElement?, schools: JsonElement?, pri
         val tendance = prices.obj("trend")
         listOf("Maison", "Appartement").forEach { k ->
             val q = autour.obj("area_eur_m2").obj(k)
-            q.num("median")?.toInt()?.let { med ->
-                Row(stringResource(R.string.median_area, typeLocal(k).lowercase()),
-                    stringResource(R.string.median_value_n, med, q.num("n")?.toInt() ?: 0))
-            }
+            medianText(q)?.let { Row(stringResource(R.string.median_area, typeLocal(k).lowercase()), it) }
             trendText(tendance.obj("area").obj(k))?.let {
                 Row(stringResource(R.string.trend_area, typeLocal(k).lowercase()), it)
             }
@@ -707,6 +704,15 @@ private fun typeLocal(raw: String?): String = when (raw?.lowercase()) {
     "appartement" -> stringResource(R.string.local_apartment)
     "maison" -> stringResource(R.string.local_house)
     else -> raw ?: "?"
+}
+
+/** Une médiane, ou le nombre de ventes quand il y en a moins de 10. */
+@Composable
+private fun medianText(m: JsonElement?): String? {
+    val med = m.num("median")?.toInt() ?: return null
+    val n = m.num("n")?.toInt() ?: 0
+    return if (n >= 10) stringResource(R.string.median_value_n, med, n)
+    else stringResource(R.string.median_too_few, n)
 }
 
 /** « +7 % depuis 2021 » : première et dernière médiane annuelle ; rien sous

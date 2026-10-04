@@ -91,6 +91,7 @@
     <string name="local_house">House</string>
     <string name="median_price">Median price (%1$s)</string>
     <string name="median_area">Neighbourhood median (%1$s)</string>
+    <string name="median_too_few">Only %1$d sales: no representative median</string>
     <string name="median_value_n">%1$d €/m² (%2$d sales)</string>
     <string name="trend_commune">Trend, municipality (%1$s)</string>
     <string name="trend_area">Trend, neighbourhood (%1$s)</string>
