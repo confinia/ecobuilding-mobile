@@ -125,6 +125,16 @@ struct BuildingMap: UIViewRepresentable {
                 double.isEnabled = false
             }
         }
+        // Un glissement n'est pas un appui (confinia/ecobuilding#526) : l'appui
+        // attend que les gestes de la carte (déplacer, pincer, incliner) aient
+        // échoué. Un léger glissement, que l'appui tolère seul, désignait le
+        // bâtiment dessous. Un vrai appui n'y perd rien : ces gestes échouent
+        // dès que le doigt se lève sans avoir bougé.
+        for recognizer in map.gestureRecognizers ?? []
+        where recognizer !== tap && recognizer.isEnabled
+            && (recognizer is UIPanGestureRecognizer || recognizer is UIPinchGestureRecognizer) {
+            tap.require(toFail: recognizer)
+        }
         context.coordinator.map = map
         return map
     }
